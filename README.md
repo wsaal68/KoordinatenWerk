@@ -3,11 +3,11 @@
 # KoordinatenWerk
 KoordinatenWerk: Umrechnung von Lat/Lng, UTM, MGRS und DMS. Suchen, finden und messen von Orten .
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
+![Uploading koordinatenwerk_logo.svg…]()
 
 # KoordinatenWerk
 
-**KoordinatenWerk** ist ein webbasiertes Tool zur Umrechnung und Anzeige von geografischen Koordinaten in verschiedenen Formaten: Dezimalgrad (Lat/Lng), UTM, MGRS und DMS. Es bietet Funktionen zum Suchen von Orten, zur Anzeige auf einer interaktiven Karte (Leaflet), sowie zum Messen von Strecken und Flächen.
+KoordinatenWerk ist ein webbasiertes Tool zur Umrechnung und Anzeige von geografischen Koordinaten in verschiedenen Formaten: Dezimalgrad (Lat/Lng), UTM, MGRS und DMS. Es bietet Funktionen zum Suchen von Orten, zur Anzeige auf einer interaktiven Karte (Leaflet), sowie zum Messen von Strecken und Flächen.
 
 ## Features
 
