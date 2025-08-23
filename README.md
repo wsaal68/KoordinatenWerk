@@ -41,6 +41,7 @@ MIT License – siehe [LICENSE](LICENSE).
 
 
 ---
+## Autor
 
 © 2025 Wolfgang Saal, Böllenborn  
 Entwickelt für THW OV Bad Bergzabern
