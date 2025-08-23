@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KoordinatenWerk</title>
+  
+<!-- Basis-Metadaten -->
+  <meta name="description" content="KoordinatenWerk: Umrechnung von Lat/Lng, UTM, MGRS und DMS. Suchen, finden und messen von Orten – entwickelt für THW OV Bad Bergzabern." />
+  <meta name="author" content="Wolfgang 'Wolle' Saal, Böllenborn" />
+  <meta name="keywords" content="Koordinaten, GPS, UTM, MGRS, DMS, THW, Bad Bergzabern, Karte, Messen, Geocoding" />
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- proj4 (UTM via +proj-Strings) -->
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
+
+<style>
+  :root{
+    --panel-w: 460px;
+    --brand: #8fb4ff;
+    --line:  #2b3446;
+    --grid:  #9ec1ff;
+    --grid-label: #e6efff;
+    --ctl-h: 40px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial, sans-serif;display:flex;height:100vh;background:#0e1420}
+  .panel{width:var(--panel-w);padding:20px;background:#121821;color:#fff;overflow-y:auto;flex-shrink:0}
+  .card{margin-bottom:18px}
+  .card h2{font-size:16px;margin-bottom:8px;color:var(--brand)}
+  .card h3{font-size:13px;margin:10px 0 6px 0;color:#c9d3e0}
+  .card input,.card select,.card button{
+    width:100%;padding:8px;margin-top:6px;background:#1d2430;color:#fff;border:1px solid #3a4354;border-radius:6px;
+    min-height: var(--ctl-h);
+  }
+  .grid{display:grid;gap:10px;grid-template-columns:repeat(4,1fr)}
+  .grid-2{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
+  .grid-4{display:grid;gap:10px;grid-template-columns:repeat(4,1fr)}
+  .row{display:grid;grid-template-columns:1fr;gap:8px}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btnrow-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .map-wrap{flex-grow:1}
+  #map{height:100%}
+  small.hint{opacity:.75}
+  label{font-size:12px;color:#c9d3e0;white-space:nowrap}
+  .warn{font-size:12px;color:#ffadad;margin-top:6px}
+
+  header.brand{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  header.brand svg{width:80px;height:80px;flex:0 0 auto;display:block}
+  header.brand h1{font-size:20px;line-height:1}
+  header.brand small{opacity:.75;font-size:12px}
+
+  .divider{border:0;border-top:1px solid var(--line);opacity:.8;margin:12px 0}
+
+  .wch{ width: calc(var(--ch, 14) * 1ch); }
+  input[readonly]{ background:#1b2330; color:#bfcde0; border:1px solid #3a4354; }
+
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number]{ -moz-appearance: textfield; }
+
+  .btnrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  #measureInfo{font-size:12px;opacity:.9;margin-top:8px;line-height:1.4}
+  .modeActive{outline:2px solid #6ea8fe}
+
+  .legal-wrap{margin-top:14px}
+  .legal{
+    margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+    background:#0f1622; font-size:12px;opacity:.95;display:flex;flex-wrap:wrap;gap:8px;
+  }
+  .legal a{color:var(--brand);text-decoration:none}
+  .legal a:hover{text-decoration:underline}
+
+  .copyrow{display:flex; align-items:flex-end; gap:6px}
+  .copyrow input[readonly]{flex:1; height: var(--ctl-h); min-width:0;}
+  .copybtn{
+    display:flex; align-items:center; justify-content:center;
+    height: var(--ctl-h); width: var(--ctl-h);
+    padding:0; border:1px solid #3a4354; background:#1b2330; color:#dbe6ff;
+    border-radius:6px; cursor:pointer; line-height:1; min-width:0; flex:0 0 var(--ctl-h);
+    aspect-ratio:auto;
+  }
+  .copybtn:hover{ filter:brightness(1.08); }
+  .copybtn.copied{ outline:2px solid var(--brand); }
+  .copybtn svg{ width:16px; height:16px; stroke: var(--brand); fill:none; stroke-width:2; }
+
+  .grid-label{
+    font: 11px/1.2 Arial, sans-serif;
+    color: var(--grid-label);
+    background: rgba(13,18,28,.72);
+    padding:2px 4px;
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:4px;
+    white-space:nowrap;
+  }
+
+  #gridOptions{ transition: opacity .15s ease }
+  #gridOptions.hidden{ opacity:.0; height:0; overflow:hidden; pointer-events:none }
+
+  /* ============================
+     SPEZIFISCHE FIXES: UTM & MGRS
+     ============================ */
+
+  /* UTM – erste Zeile: kleine Felder fix, E/N flexibel */
+  #sec-utm .grid-4{
+    grid-template-columns: 56px 64px 1fr 1fr; /* Zone | Hem | Ost | Nord */
+    align-items: start;
+  }
+  #utmZone { width:56px !important; min-width:56px; max-width:56px; text-align:center; }
+  #utmHem  { width:64px !important; min-width:64px; max-width:64px; text-align:center; }
+
+  /* UTM – zweite Zeile: zwei Spalten nebeneinander mit identischem Abstand */
+  #sec-utm .row-2{
+    display:grid;
+    grid-template-columns: 60px 1fr; /* Band links fix 60px, rechts flex */
+    gap:10px;                        /* gleich wie übrige Grids */
+    align-items:end;                 /* bündig unten */
+  }
+  #sec-utm .row-2 > div:first-child{ display:flex; flex-direction:column; }
+  #sec-utm .row-2 > div:first-child label{ margin-bottom:4px; }
+  #utmBand{ width:60px !important; min-width:60px; max-width:60px; text-align:center; }
+
+  #sec-utm .row-2 > div:nth-child(2){ display:flex; flex-direction:column; min-width:0; }
+  #sec-utm .row-2 > div:nth-child(2) label{ margin-bottom:4px; }
+  #sec-utm .row-2 .copyrow{ margin-top:0; }
+  #utmString{ flex:1 1 auto; width:100% !important; min-width:0; }
+  #copyUtm{ flex:0 0 var(--ctl-h); width:var(--ctl-h); height:var(--ctl-h); padding:0; aspect-ratio:auto; align-self:flex-end; }
+
+  /* MGRS – kleine Felder fix, E/N flexibel */
+  #sec-mgrs .grid-4{
+    grid-template-columns: 80px 64px 1fr 1fr; /* Zone+Band | 100km | E | N */
+    align-items:start;
+  }
+  #mgrsZoneBand { width:80px !important; min-width:80px; max-width:80px; text-align:center; }
+  #mgrs100k     { width:64px !important; min-width:64px; max-width:64px; text-align:center; }
+
+  #utmOstwert, #utmNordwert, #mgrsE, #mgrsN{
+    width:100% !important;
+    min-width:0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  #sec-utm .grid-4 label,
+  #sec-mgrs .grid-4 label{
+    font-size:11px;
+    line-height:1.2;
+  }
+
+  #sec-utm .grid-4 > div,
+  #sec-mgrs .grid-4 > div{
+    min-width:0;
+  }
+
+  .copyrow input[readonly]{ width:100% !important; }
+
+  /* Responsive */
+  @media (max-width: 520px){
+    :root{ --panel-w: 100vw; }
+    body{ flex-direction:column; }
+    .map-wrap{ height:55vh; }
+  }
+  @media (max-width: 420px){
+    #sec-utm .grid-4, #sec-mgrs .grid-4{ grid-template-columns: repeat(2, 1fr); }
+    #sec-utm .row-2{ grid-template-columns: 1fr; align-items:stretch; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="panel">
+    <header class="brand">
+      <svg viewBox="0 0 96 96" role="img" aria-labelledby="logoTitle" xmlns="http://www.w3.org/2000/svg">
+        <title id="logoTitle">KoordinatenWerk – Kompassrose</title>
+        <circle cx="48" cy="48" r="36" fill="none" stroke="var(--brand)" stroke-width="2"/>
+        <g stroke="var(--brand)" stroke-opacity="0.35" stroke-width="1">
+          <circle cx="48" cy="48" r="26" fill="none"/>
+          <circle cx="48" cy="48" r="16" fill="none"/>
+          <line x1="12" y1="48" x2="84" y2="48"/>
+          <line x1="48" y1="12" x2="48" y2="84"/>
+        </g>
+        <g stroke="var(--brand)" stroke-width="2" stroke-linecap="round">
+          <line x1="48" y1="8"  x2="48" y2="14"/>
+          <line x1="48" y1="82" x2="48" y2="88"/>
+          <line x1="8"  y1="48" x2="14" y2="48"/>
+          <line x1="82" y1="48" x2="88" y2="48"/>
+          <line x1="19.5" y1="19.5" x2="24" y2="24"/>
+          <line x1="72.5" y1="72.5" x2="68" y2="68"/>
+          <line x1="72.5" y1="23.5" x2="68" y2="28"/>
+          <line x1="19.5" y1="72.5" x2="24" y2="68"/>
+        </g>
+        <g transform="rotate(-20 48 48)">
+          <polygon points="48,16 55,41 48,46 41,41" fill="var(--brand)"/>
+          <polygon points="48,80 41,46 48,41 55,46" fill="none" stroke="var(--brand)" stroke-width="1.8"/>
+        </g>
+        <circle cx="48" cy="48" r="2.2" fill="var(--brand)"/>
+      </svg>
+      <div>
+        <h1 id="brand-title">KoordinatenWerk</h1>
+        <small>Koordinaten • Suchen • Finden • Messen</small><br>
+        <small>THW OV Bad Bergzabern</small>
+      </div>
+    </header>
+
+    <!-- Adresse / Geocoding -->
+    <div class="card">
+      <h2>Adresse / Ort</h2>
+      <form id="addrForm">
+        <input id="addrQuery" type="text" placeholder="z. B. Brandenburger Tor, Berlin"/>
+        <div class="btnrow-2" style="margin-top:8px">
+          <button id="addrSearch" type="submit">Suchen</button>
+          <button id="addrReset" type="button" title="Auf Startposition zurücksetzen">Reset</button>
+        </div>
+        <select id="addrResults" style="display:none;margin-top:8px"></select>
+      </form>
+    </div>
+
+    <!-- Kartenstil & Raster -->
+    <div class="card" id="sec-basemap">
+      <h2>Kartenstil & Raster</h2>
+      <div class="grid-2">
+        <div>
+          <label for="baseLayer">Basiskarte</label>
+          <select id="baseLayer">
+            <option value="osm" selected>Standard (OSM)</option>
+            <option value="esri">Satellit (Esri)</option>
+          </select>
+        </div>
+        <div>
+          <label for="gridType">Raster</label>
+          <select id="gridType">
+            <option value="auto" selected>Auto (zoomabhängig)</option>
+            <option value="none">Kein Raster</option>
+            <option value="utm1">UTM 1 km</option>
+            <option value="utm10">UTM 10 km</option>
+            <option value="mgrs100">MGRS 100 km</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="gridOptions">
+        <div class="grid-2" style="margin-top:8px">
+          <div>
+            <label for="gridColor">Rasterfarbe</label>
+            <input id="gridColor" type="color" value="#9ec1ff" />
+          </div>
+          <div>
+            <label for="gridLabelColor">Beschriftungsfarbe</label>
+            <input id="gridLabelColor" type="color" value="#e6efff" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:8px">
+          <div>
+            <label for="gridLabels" style="display:block">Linien beschriften</label>
+            <select id="gridLabels">
+              <option value="on" selected>An</option>
+              <option value="off">Aus</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input id="gridAutoContrast" type="checkbox" style="width:auto;margin-top:0" />
+            <label for="gridAutoContrast" style="margin-top:0">Kontrast automatisch</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dezimalgrad -->
+    <hr class="divider">
+    <div class="card" id="sec-dec">
+      <h2>Dezimale Grad</h2>
+      <div class="grid-2">
+        <div>
+          <label for="lat">Breite (Lat)</label>
+          <input id="lat" type="text" inputmode="decimal" maxlength="12" pattern="-?\d{1,2}(\.\d{1,6})?" />
+        </div>
+        <div>
+          <label for="lng">Länge (Lng)</label>
+          <input id="lng" type="text" inputmode="decimal" maxlength="13" pattern="-?\d{1,3}(\.\d{1,6})?" />
+        </div>
+      </div>
+    </div>
+
+    <!-- UTM -->
+    <hr class="divider">
+    <div class="card" id="sec-utm">
+      <h2>UTM Koordinaten</h2>
+      <div class="grid-4">
+        <div><label for="utmZone">Zone</label>
+          <input id="utmZone" class="wch" style="--ch:2" type="text" inputmode="numeric" maxlength="2" pattern="([1-9]|[1-5][0-9]|60)"/>
+        </div>
+        <div><label for="utmHem">Halbkugel</label>
+          <select id="utmHem" class="wch" style="--ch:2"><option value="N">N</option><option value="S">S</option></select>
+        </div>
+        <div><label for="utmOstwert">Ostwert (m)</label>
+          <input id="utmOstwert" class="wch" style="--ch:12" type="text" inputmode="decimal" maxlength="10" pattern="\d{5,6}(\.\d{1,3})?"/>
+        </div>
+        <div><label for="utmNordwert">Nordwert (m)</label>
+          <input id="utmNordwert" class="wch" style="--ch:14" type="text" inputmode="decimal" maxlength="12" pattern="\d{1,8}(\.\d{1,3})?"/>
+        </div>
+      </div>
+
+      <div class="row-2" style="margin-top:8px">
+        <div>
+          <label for="utmBand">Band</label>
+          <input id="utmBand" class="wch" style="--ch:2" type="text" readonly />
+        </div>
+        <div>
+          <label for="utmString">UTM (lesbar)</label>
+          <div class="copyrow">
+            <input id="utmString" class="wch" style="--ch:50" type="text" readonly />
+            <button id="copyUtm" type="button" class="copybtn" title="UTM kopieren" aria-label="UTM kopieren">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+                <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="utmWarn" class="warn" style="display:none"></div>
+    </div>
+
+    <!-- MGRS -->
+    <hr class="divider">
+    <div class="card" id="sec-mgrs">
+      <h2>MGRS Koordinaten</h2>
+      <div class="grid-4">
+        <div><label for="mgrsZoneBand">Zone+Band</label>
+          <input id="mgrsZoneBand" class="wch" style="--ch:3" type="text" maxlength="3" placeholder="32U"/>
+        </div>
+        <div><label for="mgrs100k">100km</label>
+          <input id="mgrs100k" class="wch" style="--ch:2" type="text" maxlength="2" placeholder="NV"/>
+        </div>
+        <div><label for="mgrsE">Ostwert</label>
+          <input id="mgrsE" class="wch" style="--ch:5" type="text" maxlength="5" placeholder="70169"/>
+        </div>
+        <div><label for="mgrsN">Nordwert</label>
+          <input id="mgrsN" class="wch" style="--ch:5" type="text" maxlength="5" placeholder="50301"/>
+        </div>
+      </div>
+      <div class="copyrow" style="margin-top:8px">
+        <div style="flex:1">
+          <label for="mgrsString">MGRS (lesbar)</label>
+          <input id="mgrsString" class="wch" style="--ch:34" type="text" readonly />
+        </div>
+        <button id="copyMgrs" type="button" class="copybtn" title="MGRS kopieren" aria-label="MGRS kopieren">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+            <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="mgrsWarn" class="warn" style="display:none"></div>
+    </div>
+
+    <!-- DMS -->
+    <hr class="divider">
+    <div class="card" id="sec-dms">
+      <h2>DMS (Grad ° / Minuten ′ / Sekunden ″)</h2>
+      <small class="hint">Negative Grad setzen die Hemisphäre automatisch.</small>
+
+      <h3>Breite (Lat)</h3>
+      <div class="grid-4">
+        <div><label for="latDeg">Grad</label>
+          <input id="latDeg" class="wch" style="--ch:3" type="text" inputmode="numeric" maxlength="3" pattern="-?\d{1,2}"/>
+        </div>
+        <div><label for="latMin">Minuten</label>
+          <input id="latMin" class="wch" style="--ch:2" type="text" inputmode="numeric" maxlength="2" pattern="\d{1,2}"/>
+        </div>
+        <div><label for="latSec">Sekunden</label>
+          <input id="latSec" class="wch" style="--ch:6" type="text" inputmode="decimal" maxlength="6" pattern="\d{1,2}(\.\d{1,2})?"/>
+        </div>
+        <div><label for="latHem">Hemisphäre</label>
+          <select id="latHem" class="wch" style="--ch:3"><option value="N">N</option><option value="S">S</option></select>
+        </div>
+      </div>
+
+      <h3 style="margin-top:10px">Länge (Lng)</h3>
+      <div class="grid-4">
+        <div><label for="lngDeg">Grad</label>
+          <input id="lngDeg" class="wch" style="--ch:4" type="text" inputmode="numeric" maxlength="4" pattern="-?\d{1,3}"/>
+        </div>
+        <div><label for="lngMin">Minuten</label>
+          <input id="lngMin" class="wch" style="--ch:2" type="text" inputmode="numeric" maxlength="2" pattern="\d{1,2}"/>
+        </div>
+        <div><label for="lngSec">Sekunden</label>
+          <input id="lngSec" class="wch" style="--ch:6" type="text" inputmode="decimal" maxlength="6" pattern="\d{1,2}(\.\d{1,2})?"/>
+        </div>
+        <div><label for="lngHem">Hemisphäre</label>
+          <select id="lngHem" class="wch" style="--ch:3"><option value="E">E</option><option value="W">W</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messen -->
+    <div class="card" id="sec-measure">
+      <h2>Messen in der Karte</h2>
+      <div class="btnrow">
+        <button id="measureDist">Strecke</button>
+        <button id="measureArea">Fläche</button>
+        <button id="measureClear">Löschen</button>
+      </div>
+      <div id="measureInfo" class="hint"></div>
+
+      <div class="legal-wrap">
+        <hr class="divider">
+        <div class="legal">
+          <span>© 2025 Wolfgang 'Wolle' Saal, Böllenborn</span>
+          <span>•</span>
+          Script für THW OV Bad Bergzabern
+          <span>•</span>
+          <a id="licLink" href="#" target="_blank" rel="noopener">KIT-Lizenz</a>
+          <span>•</span>
+          <a id="ghLink" href="https://github.com/wsaal68" target="_blank" rel="noopener">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-wrap"><div id="map"></div></div>
+
+  <!-- MGRS Loader -->
+  <script>
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.async = true;
+        s.onload = () => resolve(true);
+        s.onerror = () => reject(new Error('Script-Load-Fehler: ' + src));
+        document.head.appendChild(s);
+      });
+    }
+    async function ensureMgrs() {
+      if (window.mgrs) return true;
+      const candidates = [
+        'https://cdn.jsdelivr.net/npm/mgrs@1.0.0/mgrs.min.js',
+        'https://cdn.jsdelivr.net/npm/mgrs@1.0.0/dist/mgrs.min.js',
+        'https://cdn.jsdelivr.net/npm/mgrs@1.0.0/dist/mgrs.js'
+      ];
+      for (const url of candidates) {
+        try { await loadScript(url); if (window.mgrs) return true; } catch(_) {}
+      }
+      return false;
+    }
+    const mgrsReady = ensureMgrs();
+  </script>
+
+  <script>
+    /* ===== Leaflet & Utils ===== */
+    let map, marker;
+    let baseOSM, baseSat, layerControl;
+    let gridLayer = null;
+
+    const $ = id => document.getElementById(id);
+    const normLngWrap = lng => ((Number(lng) + 540) % 360) - 180;
+
+    function getCssVar(name, fallback){
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    }
+    function setCssVar(name, value){ document.documentElement.style.setProperty(name, value); }
+
+    function lonToUtmZone(lon) { return Math.floor((lon + 180) / 6) + 1; }
+    function latToGzdBand(lat) {
+      if (lat < -80) return 'C';
+      if (lat > 84)  return 'X';
+      const bands = 'CDEFGHJKLMNPQRSTUVWX';
+      const idx = Math.floor((lat + 80) / 8);
+      return bands[idx] || '';
+    }
+    function utmProjString(zone, hemisphere) {
+      const south = hemisphere === 'S' ? ' +south' : '';
+      return `+proj=utm +zone=${zone}${south} +datum=WGS84 +units=m +no_defs +type=crs`;
+    }
+
+    /* ===== Map & Layers ===== */
+    function initMap(lat, lng) {
+      baseOSM = L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { attribution: '&copy; OpenStreetMap-Mitwirkende' }
+      );
+      baseSat = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community' }
+      );
+
+      map = L.map('map', { center: [lat, lng], zoom: 13, layers: [baseOSM] });
+
+      layerControl = L.control.layers(
+        { 'Standard (OSM)': baseOSM, 'Satellit (Esri)': baseSat },
+        null,
+        { position: 'topright', collapsed: true }
+      ).addTo(map);
+
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+      marker.on('moveend', () => {
+        const { lat, lng } = marker.getLatLng();
+        setLatLng(lat, lng, 'map');
+      });
+      map.on('click', onMapClick);
+
+      // Raster bei Bewegungen neu (Auto-Modus)
+      map.on('moveend zoomend', () => {
+        if ($('gridType').value !== 'none') updateGrid();
+      });
+    }
+
+    /* Helper: sofort neu zeichnen */
+    function redrawGridNow(){
+      try { updateGrid(); } catch(e){ console.warn('updateGrid error', e); }
+    }
+
+    /* Basiskarte robust umschalten + Raster sofort neu zeichnen */
+    function switchBaseLayer(val){
+      const wantSat = (val === 'esri');
+      const hasOSM = map.hasLayer(baseOSM);
+      const hasSat = map.hasLayer(baseSat);
+
+      if (wantSat){
+        if (hasOSM) map.removeLayer(baseOSM);
+        if (!hasSat) baseSat.addTo(map);
+      } else {
+        if (hasSat) map.removeLayer(baseSat);
+        if (!hasOSM) baseOSM.addTo(map);
+      }
+      maybeApplyAutoContrast();
+      redrawGridNow();
+    }
+
+    /* ===== DMS ===== */
+    function toDMS(value, isLat) {
+      const sign = value < 0 ? -1 : 1;
+      let abs = Math.abs(value);
+      let deg = Math.floor(abs);
+      abs = (abs - deg) * 60;
+      let min = Math.floor(abs);
+      let sec = (abs - min) * 60;
+      sec = Math.round(sec * 100) / 100;
+      if (sec >= 60) { sec -= 60; min += 1; }
+      if (min >= 60) { min -= 60; deg += 1; }
+      const hem = isLat ? (sign >= 0 ? 'N' : 'S') : (sign >= 0 ? 'E' : 'W');
+      return { deg, min, sec, hem };
+    }
+    function fromDMS(deg, min, sec, hem, isLat) {
+      deg = Number(deg); min = Number(min); sec = Number(sec);
+      if ([deg,min,sec].some(Number.isNaN)) return null;
+      if (deg < 0) hem = isLat ? 'S' : 'W';
+      deg = Math.abs(deg);
+      if (sec >= 60) { min += Math.floor(sec/60); sec = sec % 60; }
+      if (min >= 60) { deg += Math.floor(min/60); min = min % 60; }
+      if (isLat && deg > 90) deg = 90;
+      if (!isLat && deg > 180) deg = 180;
+      const dec = deg + (min/60) + (sec/3600);
+      const sign = (hem === (isLat ? 'S' : 'W')) ? -1 : 1;
+      return sign * dec;
+    }
+    function setDMSFields(lat, lng) {
+      const latD = toDMS(lat, true);
+      const lngD = toDMS(lng, false);
+      $('latDeg').value = latD.deg; $('latMin').value = latD.min; $('latSec').value = latD.sec.toFixed(2); $('latHem').value = latD.hem;
+      $('lngDeg').value = lngD.deg; $('lngMin').value = lngD.min; $('lngSec').value = lngD.sec.toFixed(2); $('lngHem').value = lngD.hem;
+    }
+
+    /* ===== UTM helpers ===== */
+    function setUtmNordMaxLen(hem) {
+      const nEl = $('utmNordwert');
+      nEl.dataset.maxInt = (hem === 'S') ? '8' : '7';
+      nEl.value = sanitizeUTMDecimal(nEl.value, Number(nEl.dataset.maxInt||'8'), 3);
+    }
+    function sanitizeUTMDecimal(val, maxIntDigits, maxDecDigits){
+      val = String(val||'').replace(/[^0-9.]/g,'');
+      const parts = val.split('.');
+      const i = (parts[0]||'').slice(0, Math.max(1,maxIntDigits));
+      const d = (parts[1]||'').slice(0, maxDecDigits);
+      return d ? `${i}.${d}` : i;
+    }
+    function setUTMFieldsFromLatLng(lat, lng) {
+      const zone = lonToUtmZone(lng);
+      const hem  = lat >= 0 ? 'N' : 'S';
+      setUtmNordMaxLen(hem);
+      const utmDef = utmProjString(zone, hem);
+      try {
+        const [E, N] = proj4('EPSG:4326', utmDef, [lng, lat]);
+        $('utmZone').value = zone;
+        $('utmHem').value  = hem;
+        $('utmOstwert').value  = (Math.round(E*1000)/1000).toFixed(3);
+        $('utmNordwert').value = sanitizeUTMDecimal((Math.round(N*1000)/1000).toFixed(3), Number($('utmNordwert').dataset.maxInt||'8'), 3);
+        $('utmBand').value = latToGzdBand(lat);
+        $('utmString').value = `${zone} ${hem} ${Number(E).toFixed(3)} ${Number(N).toFixed(3)}`;
+        $('utmWarn').style.display = 'none';
+      } catch (err) {
+        console.error('UTM aus Lat/Lng fehlgeschlagen:', err);
+        $('utmZone').value=$('utmHem').value=$('utmOstwert').value=$('utmNordwert').value=$('utmBand').value=$('utmString').value="";
+        $('utmWarn').textContent = 'UTM-Umrechnung fehlgeschlagen (proj4).';
+        $('utmWarn').style.display = 'block';
+      }
+    }
+    function updateFromUTMInputs() {
+      const zone = parseInt($('utmZone').value, 10);
+      const hem  = $('utmHem').value;
+      setUtmNordMaxLen(hem);
+      $('utmOstwert').value  = sanitizeUTMDecimal($('utmOstwert').value, 6, 3);
+      $('utmNordwert').value = sanitizeUTMDecimal($('utmNordwert').value, Number($('utmNordwert').dataset.maxInt||'8'), 3);
+
+      const E = parseFloat($('utmOstwert').value);
+      const N = parseFloat($('utmNordwert').value);
+
+      $('utmString').value = (Number.isInteger(zone) && Number.isFinite(E) && Number.isFinite(N))
+        ? `${zone} ${hem || 'N'} ${E.toFixed(3)} ${N.toFixed(3)}`
+        : '';
+
+      const eOK = Number.isFinite(E) && E >= 100000 && E <= 900000;
+      const nOK = Number.isFinite(N) && N >= 0 && N <= 10000000;
+      const zOK = Number.isInteger(zone) && zone >= 1 && zone <= 60;
+      const hOK = (hem === 'N' || hem === 'S');
+      if (!(eOK && nOK && zOK && hOK)) return;
+
+      const utmDef = utmProjString(zone, hem);
+      try {
+        const [lon, lat] = proj4(utmDef, 'EPSG:4326', [E, N]);
+        setLatLng(lat, lon, 'utm');
+        $('utmWarn').style.display = 'none';
+      } catch (err) {
+        console.error('UTM-Eingabe ungültig:', err);
+        $('utmWarn').textContent = 'UTM-Eingaben ungültig.';
+        $('utmWarn').style.display = 'block';
+      }
+    }
+
+    /* ===== Raster (Auto & Manuell) ===== */
+    function getAutoGridType(zoom){
+      if (zoom <= 9)  return (typeof mgrs === 'object') ? 'mgrs100' : 'utm10';
+      if (zoom <= 12) return 'utm10';
+      return 'utm1';
+    }
+
+    function computeAutoColors(){
+      const base = $('baseLayer').value;
+      return (base === 'esri')
+        ? { line:'#9ec1ff', label:'#e6efff' }
+        : { line:'#1e3aff', label:'#e6efff' };
+    }
+
+    function maybeApplyAutoContrast(){
+      const auto = $('gridAutoContrast').checked;
+      if (!auto) return;
+      const { line, label } = computeAutoColors();
+      setCssVar('--grid', line);
+      setCssVar('--grid-label', label);
+      $('gridColor').value = line;
+      $('gridLabelColor').value = label;
+    }
+
+    function refreshGridOptionsVisibility(){
+      const isNone = $('gridType').value === 'none';
+      $('gridOptions').classList.toggle('hidden', isNone);
+      const auto = $('gridAutoContrast').checked;
+      $('gridColor').disabled = auto;
+      $('gridLabelColor').disabled = auto;
+    }
+
+    function updateGrid(){
+      if (typeof proj4 !== 'function') {
+        console.warn('Raster: proj4 nicht geladen – kein UTM-Raster möglich.');
+        return;
+      }
+      try {
+        if (!gridLayer) gridLayer = L.layerGroup().addTo(map);
+        gridLayer.clearLayers();
+
+        let type = $('gridType').value;
+        if (type === 'none') return;
+        if (type === 'auto') type = getAutoGridType(map.getZoom());
+        if (type === 'mgrs100' && typeof mgrs !== 'object') {
+          console.warn('Raster: MGRS nicht verfügbar – Fallback auf UTM 10 km.');
+          type = 'utm10';
+        }
+
+        const center = map.getCenter();
+        const zone = lonToUtmZone(center.lng);
+        const hem  = center.lat >= 0 ? 'N' : 'S';
+        const utmDef = utmProjString(zone, hem);
+
+        const b  = map.getBounds();
+        const sw = proj4('EPSG:4326', utmDef, [b.getWest(), b.getSouth()]);
+        const ne = proj4('EPSG:4326', utmDef, [b.getEast(), b.getNorth()]);
+        let Emin = Math.min(sw[0], ne[0]), Emax = Math.max(sw[0], ne[0]);
+        let Nmin = Math.min(sw[1], ne[1]), Nmax = Math.max(sw[1], ne[1]);
+
+        const gridColor = getCssVar('--grid', '#9ec1ff');
+
+        const addLabel = (latlng, text) => {
+          if ($('gridLabels').value !== 'on') return;
+          L.marker(latlng, { interactive:false, icon: L.divIcon({ className:'grid-label', html: text, iconAnchor:[0,0] }) }).addTo(gridLayer);
+        };
+
+        const drawUtm = (stepMeters) => {
+          const samples = 16;
+          const eStart = Math.ceil(Emin/stepMeters)*stepMeters;
+          const eEnd   = Math.floor(Emax/stepMeters)*stepMeters;
+          const nStart = Math.ceil(Nmin/stepMeters)*stepMeters;
+          const nEnd   = Math.floor(Nmax/stepMeters)*stepMeters;
+
+          for(let e=eStart; e<=eEnd; e+=stepMeters){
+            const pts=[];
+            for(let i=0;i<=samples;i++){
+              const n = Nmin + (i*(Nmax-Nmin)/samples);
+              const ll = proj4(utmDef, 'EPSG:4326', [e,n]);
+              pts.push([ll[1], ll[0]]);
+            }
+            L.polyline(pts, {color: gridColor, weight:1.6, opacity:0.95}).addTo(gridLayer);
+            const top = proj4(utmDef,'EPSG:4326',[e,Nmax]);
+            addLabel([top[1], top[0]], `E ${Math.round(e)}`);
+          }
+
+          for(let n=nStart; n<=nEnd; n+=stepMeters){
+            const pts=[];
+            for(let i=0;i<=samples;i++){
+              const e = Emin + (i*(Emax-Emin)/samples);
+              const ll = proj4(utmDef, 'EPSG:4326', [e,n]);
+              pts.push([ll[1], ll[0]]);
+            }
+            L.polyline(pts, {color: gridColor, weight:1.6, opacity:0.95}).addTo(gridLayer);
+            const left = proj4(utmDef,'EPSG:4326',[Emin,n]);
+            addLabel([left[1], left[0]], `N ${Math.round(n)}`);
+          }
+        };
+
+        const drawMgrs100 = () => {
+          if (typeof mgrs !== 'object') return;
+          const step = 100000; // 100 km
+          const eStart = Math.ceil(Emin/step)*step;
+          const eEnd   = Math.floor(Emax/step)*step;
+          const nStart = Math.ceil(Nmin/step)*step;
+          const nEnd   = Math.floor(Nmax/step)*step;
+
+          for(let e=eStart; e<eEnd; e+=step){
+            for(let n=nStart; n<nEnd; n+=step){
+              const corners = [
+                proj4(utmDef,'EPSG:4326',[e, n]),
+                proj4(utmDef,'EPSG:4326',[e+step, n]),
+                proj4(utmDef,'EPSG:4326',[e+step, n+step]),
+                proj4(utmDef,'EPSG:4326',[e, n+step]),
+              ].map(ll=>[ll[1], ll[0]]);
+              L.polygon(corners, {color: gridColor, weight:1.6, opacity:0.98, fillOpacity:0}).addTo(gridLayer);
+
+              const mid = proj4(utmDef,'EPSG:4326',[e+step/2, n+step/2]);
+              const code = (mgrs.forward([mid[0], mid[1]], 0) || '').toUpperCase().replace(/\s+/g,'');
+              const lbl  = code ? `${code.slice(0,3)} ${code.slice(3,5)}` : '';
+              addLabel([mid[1], mid[0]], lbl);
+            }
+          }
+        };
+
+        if (type === 'utm1')   drawUtm(1000);
+        if (type === 'utm10')  drawUtm(10000);
+        if (type === 'mgrs100') drawMgrs100();
+
+      } catch(err){
+        console.error('Raster-Fehler:', err);
+      }
+    }
+
+    /* ===== Mess-Funktionen ===== */
+    let measureMode = 'none';
+    let distMarkers = [], distLine = null;
+    let areaMarkers = [], areaPoly = null;
+
+    function fmtDist(m){ if (!Number.isFinite(m)) return ''; const km = m/1000; return (m<1000) ? `${m.toFixed(0)} m` : `${km.toFixed(3)} km (${m.toFixed(0)} m)`; }
+    function fmtArea(m2){ if (!Number.isFinite(m2)) return ''; const ha = m2/10000, km2 = m2/1e6; return `${m2.toLocaleString('de-DE',{maximumFractionDigits:0})} m²  (${ha.toFixed(2)} ha, ${km2.toFixed(3)} km²)`; }
+
+    /* Marker-Entfernung (einzeln) */
+    function removeMarkerFrom(arr, markerRef){
+      const i = arr.indexOf(markerRef);
+      if (i > -1) arr.splice(i, 1);
+      map.removeLayer(markerRef);
+    }
+
+    function setMode(mode){
+      measureMode = mode;
+      ['measureDist','measureArea'].forEach(id=>$(id).classList.remove('modeActive'));
+      if (mode==='distance') $('measureDist').classList.add('modeActive');
+      if (mode==='area')     $('measureArea').classList.add('modeActive');
+      if (mode==='area') map.doubleClickZoom.disable(); else map.doubleClickZoom.enable();
+
+      if (mode==='distance') {
+        $('measureInfo').innerHTML =
+          'Modus <b>Strecke</b>: Karte klicken → Punkt A, nochmals klicken → Punkt B. ' +
+          'Marker sind per Drag&Drop verschiebbar. <b>Rechtsklick oder Doppelklick entfernt einen Marker.</b>';
+      } else if (mode==='area') {
+        $('measureInfo').innerHTML =
+          'Modus <b>Fläche</b>: Jeder Klick fügt einen Punkt hinzu. Marker sind per Drag&Drop verschiebbar. ' +
+          'Fläche wird automatisch geschlossen. <b>Rechtsklick oder Doppelklick entfernt einen Marker.</b>';
+      } else {
+        $('measureInfo').innerHTML = '';
+      }
+    }
+
+    function clearMeasure(){
+      distMarkers.forEach(m=>map.removeLayer(m)); distMarkers = [];
+      if (distLine) { map.removeLayer(distLine); distLine=null; }
+      areaMarkers.forEach(m=>map.removeLayer(m)); areaMarkers = [];
+      if (areaPoly) { map.removeLayer(areaPoly); areaPoly=null; }
+      $('measureInfo').innerHTML = '';
+    }
+
+    function updateDistance(){
+      if (distMarkers.length<2) return;
+      const a = distMarkers[0].getLatLng();
+      const b = distMarkers[1].getLatLng();
+      const d = a.distanceTo(b);
+      if (!distLine) distLine = L.polyline([a,b]).addTo(map);
+      else distLine.setLatLngs([a,b]);
+      $('measureInfo').innerHTML = `<b>Strecke:</b> ${fmtDist(d)}`;
+    }
+
+    function handleDistanceClick(latlng){
+      function attach(m){
+        m.on('drag', updateDistance);
+        m.on('contextmenu', () => {
+          removeMarkerFrom(distMarkers, m);
+          if (distMarkers.length < 2){
+            if (distLine){ map.removeLayer(distLine); distLine = null; }
+            $('measureInfo').innerHTML = '';
+          } else { updateDistance(); }
+        });
+        m.on('dblclick', () => {
+          removeMarkerFrom(distMarkers, m);
+          if (distMarkers.length < 2){
+            if (distLine){ map.removeLayer(distLine); distLine = null; }
+            $('measureInfo').innerHTML = '';
+          } else { updateDistance(); }
+        });
+        return m;
+      }
+
+      if (distMarkers.length === 0) {
+        const m = attach(L.marker(latlng, {draggable:true}).addTo(map));
+        distMarkers.push(m);
+      } else if (distMarkers.length === 1) {
+        const m = attach(L.marker(latlng, {draggable:true}).addTo(map));
+        distMarkers.push(m);
+      } else {
+        distMarkers[1].setLatLng(latlng);
+      }
+      updateDistance();
+    }
+
+    function computeAreaUTM(latlngs){
+      const n = latlngs.length; if (n<3) return { area:0, perimeter:0 };
+      const avgLat = latlngs.reduce((s,p)=>s+p.lat,0)/n;
+      const avgLng = latlngs.reduce((s,p)=>s+p.lng,0)/n;
+      const zone = lonToUtmZone(avgLng);
+      const hem  = avgLat>=0 ? 'N' : 'S';
+      const utmDef = utmProjString(zone, hem);
+      const pts = latlngs.map(p => proj4('EPSG:4326', utmDef, [p.lng, p.lat]));
+      let sum = 0; for (let i=0;i<n;i++){ const [xi, yi]=pts[i]; const [xj, yj]=pts[(i+1)%n]; sum += xi*yj - xj*yi; }
+      const area = Math.abs(sum)/2;
+      let per = 0; for (let i=0;i<n;i++){ per += latlngs[i].distanceTo(latlngs[(i+1)%n]); }
+      return { area, perimeter: per };
+    }
+
+    function updateArea(){
+      const latlngs = areaMarkers.map(m=>m.getLatLng());
+      if (latlngs.length===0){
+        if (areaPoly){ map.removeLayer(areaPoly); areaPoly=null; }
+        $('measureInfo').innerHTML='Punkte setzen, um ein Polygon zu bilden.';
+        return;
+      }
+      if (!areaPoly) areaPoly = L.polygon(latlngs, {fillOpacity:0.1}).addTo(map);
+      else areaPoly.setLatLngs(latlngs);
+      if (latlngs.length>=3){
+        const { area, perimeter } = computeAreaUTM(latlngs);
+        $('measureInfo').innerHTML = `<b>Fläche:</b> ${fmtArea(area)}<br><b>Umfang:</b> ${fmtDist(perimeter)}<br><span class="hint">${latlngs.length} Punkte</span>`;
+      } else {
+        let per=0; for (let i=0;i<latlngs.length-1;i++) per += latlngs[i].distanceTo(latlngs[i+1]);
+        $('measureInfo').innerHTML = `<b>Umfang (offen):</b> ${fmtDist(per)}<br><span class="hint">${latlngs.length} Punkte – mind. 3 für Fläche</span>`;
+      }
+    }
+
+    function handleAreaClick(latlng){
+      const m = L.marker(latlng, {draggable:true}).addTo(map);
+      m.on('drag', updateArea);
+      m.on('contextmenu', () => { removeMarkerFrom(areaMarkers, m); updateArea(); });
+      m.on('dblclick', () => { removeMarkerFrom(areaMarkers, m); updateArea(); });
+      areaMarkers.push(m);
+      updateArea();
+    }
+
+    function onMapClick(e){
+      if (measureMode==='none'){
+        marker.setLatLng(e.latlng);
+        setLatLng(e.latlng.lat, e.latlng.lng, 'map');
+        return;
+      }
+      if (measureMode==='distance') { handleDistanceClick(e.latlng); return; }
+      if (measureMode==='area')     { handleAreaClick(e.latlng);    return; }
+    }
+
+    /* ===== Sync & Geocoding & Inputs ===== */
+    function setLatLng(lat, lng, src="") {
+      lat = Math.max(-90, Math.min(90, Number(lat)));
+      lng = normLngWrap(lng);
+      if (src !== 'map' && marker && map) { marker.setLatLng([lat, lng]); map.panTo([lat, lng], { animate: true }); }
+      const latStr = lat.toFixed(6), lngStr = lng.toFixed(6);
+      $('lat').value = latStr.slice(0,12);
+      $('lng').value = lngStr.slice(0,13);
+      if (src !== 'dms') setDMSFields(lat, lng);
+      setUTMFieldsFromLatLng(lat, lng);
+      setMGRSFieldsFromLatLng(lat, lng);
+      if ($('gridType').value !== 'none') updateGrid();
+    }
+
+    async function doSearch(){
+      const q = $('addrQuery').value.trim();
+      const sel = $('addrResults'); sel.style.display='none'; sel.innerHTML='';
+      if (!q) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&addressdetails=1&limit=5`, { headers:{'Accept-Language':'de'} });
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length===0) return;
+        sel.style.display='block';
+        sel.innerHTML = data.map((d,i)=>`<option value="${i}">${d.display_name}</option>`).join('');
+        sel.onchange = () => { const d = data[Number(sel.value)]; if (d) setLatLng(parseFloat(d.lat), parseFloat(d.lon), 'addr'); };
+        const first = data[0];
+        setLatLng(parseFloat(first.lat), parseFloat(first.lon), 'addr');
+      } catch(e){ console.warn('Geocoding fehlgeschlagen', e); }
+    }
+
+    /* ===== Events ===== */
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Startposition: THW OV Bad Bergzabern
+      const START_LAT = 49.0954122;
+      const START_LNG = 8.0038251;
+
+      initMap(START_LAT, START_LNG);
+
+      const ok = await mgrsReady.catch(()=>false);
+      if (!ok) {
+        $('mgrsWarn').textContent = 'MGRS konnte nicht geladen werden (CDN/MIME-Blockierung).';
+        $('mgrsWarn').style.display = 'block';
+      } else {
+        try {
+          const { lat, lng } = marker.getLatLng();
+          setMGRSFieldsFromLatLng(lat, lng);
+          redrawGridNow();
+        } catch(e){ console.warn('Post-MGRS init failed', e); }
+      }
+
+      setLatLng(START_LAT, START_LNG, 'init');
+
+      // UI-Events
+      $('addrForm').addEventListener('submit', (e)=>{ e.preventDefault(); doSearch(); });
+      $('addrSearch').addEventListener('click', (e)=>{ e.preventDefault(); doSearch(); });
+      $('addrReset').addEventListener('click', () => {
+        $('addrQuery').value = ""; $('addrResults').innerHTML = ""; $('addrResults').style.display = 'none';
+        setLatLng(START_LAT, START_LNG, 'reset');
+        redrawGridNow();
+      });
+
+      /* DD (lat/lng) */
+      $('lat').addEventListener('input', ()=> {
+        try{
+          $('lat').value = $('lat').value.replace(/[^0-9.\-]/g,'').slice(0, $('lat').maxLength);
+          const la = parseFloat($('lat').value), lo = parseFloat($('lng').value);
+          if (!Number.isNaN(la) && !Number.isNaN(lo)) { setLatLng(la, lo, 'dd'); redrawGridNow(); }
+        }catch(e){ console.warn('lat input error', e); }
+      });
+      $('lng').addEventListener('input', ()=> {
+        try{
+          $('lng').value = $('lng').value.replace(/[^0-9.\-]/g,'').slice(0, $('lng').maxLength);
+          const la = parseFloat($('lat').value), lo = parseFloat($('lng').value);
+          if (!Number.isNaN(la) && !Number.isNaN(lo)) { setLatLng(la, lo, 'dd'); redrawGridNow(); }
+        }catch(e){ console.warn('lng input error', e); }
+      });
+
+      /* DMS */
+      ['latDeg','latMin','latSec','latHem','lngDeg','lngMin','lngSec','lngHem'].forEach(id=>{
+        $(id).addEventListener('input', ()=>{
+          try{
+            const la = fromDMS($('latDeg').value, $('latMin').value, $('latSec').value, $('latHem').value, true);
+            const lo = fromDMS($('lngDeg').value, $('lngMin').value, $('lngSec').value, $('lngHem').value, false);
+            if (la==null || lo==null) return;
+            setLatLng(la, lo, 'dms');
+            redrawGridNow();
+          }catch(e){ console.warn('dms input error', e); }
+        });
+      });
+
+      /* UTM */
+      ['utmZone','utmHem','utmOstwert','utmNordwert'].forEach(id=> {
+        $(id).addEventListener('input', ()=>{
+          try{ updateFromUTMInputs(); redrawGridNow(); }
+          catch(e){ console.warn('utm input error', e); }
+        });
+      });
+      $('utmHem').addEventListener('change', ()=> setUtmNordMaxLen($('utmHem').value));
+
+      /* MGRS */
+      function updateFromMGRSInputsSafe(){
+        try{ updateFromMGRSInputs(); redrawGridNow(); }
+        catch(e){ console.warn('mgrs input error', e); }
+      }
+      ['mgrsZoneBand','mgrs100k','mgrsE','mgrsN'].forEach(id=> $(id).addEventListener('input', updateFromMGRSInputsSafe));
+
+      /* Copy-Buttons */
+      $('copyUtm').addEventListener('click', (e)=>copyById('utmString', e.currentTarget));
+      $('copyMgrs').addEventListener('click', (e)=>copyById('mgrsString', e.currentTarget));
+
+      /* Messen */
+      $('measureDist').addEventListener('click', ()=> setMode('distance'));
+      $('measureArea').addEventListener('click', ()=> setMode('area'));
+      $('measureClear').addEventListener('click', clearMeasure);
+
+      /* Basiskarte + Raster-UI (sofort neu zeichnen) */
+      $('baseLayer').addEventListener('change', e => switchBaseLayer(e.target.value));
+      $('gridType').addEventListener('change', ()=>{ refreshGridOptionsVisibility(); redrawGridNow(); });
+      $('gridLabels').addEventListener('change', redrawGridNow);
+
+      const pickerLine = $('gridColor');
+      const pickerLbl  = $('gridLabelColor');
+      const cssGrid = getCssVar('--grid', '#9ec1ff');
+      const cssLabel = getCssVar('--grid-label', '#e6efff');
+      if (cssGrid) pickerLine.value = cssGrid;
+      if (cssLabel) pickerLbl.value = cssLabel;
+
+      pickerLine.addEventListener('input', (e)=>{ setCssVar('--grid', e.target.value); redrawGridNow(); });
+      pickerLbl.addEventListener('input', (e)=>{ setCssVar('--grid-label', e.target.value); redrawGridNow(); });
+
+      $('gridAutoContrast').addEventListener('change', ()=>{ refreshGridOptionsVisibility(); maybeApplyAutoContrast(); redrawGridNow(); });
+
+      /* initial */
+      refreshGridOptionsVisibility();
+      maybeApplyAutoContrast();
+      if ($('gridType').value !== 'none') updateGrid();
+    });
+
+    /* Kopieren-Helfer */
+    function copyById(id, btn){
+      const el = document.getElementById(id);
+      const txt = (el && 'value' in el) ? el.value : '';
+      if (!txt) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(()=>{
+          btn.classList.add('copied');
+          setTimeout(()=>{ btn.classList.remove('copied'); }, 900);
+        });
+      } else {
+        el.select?.(); document.execCommand?.('copy');
+      }
+    }
+
+    /* MGRS conversions (robust) */
+    function setMGRSFieldsFromLatLng(lat, lng) {
+      if (typeof mgrs !== 'object') {
+        $('mgrsWarn').textContent = 'MGRS-Bibliothek nicht geladen.';
+        $('mgrsWarn').style.display = 'block';
+        $('mgrsZoneBand').value=$('mgrs100k').value=$('mgrsE').value=$('mgrsN').value=$('mgrsString').value="";
+        return;
+      }
+      try {
+        let m = mgrs.forward([lng, lat], 5);
+        m = (m || '').toUpperCase().replace(/\s+/g, '');
+        const zoneBand = m.slice(0,3), k100 = m.slice(3,5), e = m.slice(5,10), n = m.slice(10,15);
+        $('mgrsZoneBand').value = zoneBand || '';
+        $('mgrs100k').value     = k100 || '';
+        $('mgrsE').value        = e || '';
+        $('mgrsN').value        = n || '';
+        $('mgrsString').value   = [zoneBand, k100, e, n].filter(Boolean).join(' ');
+        $('mgrsWarn').style.display = 'none';
+      } catch (err) {
+        console.error('MGRS aus Lat/Lng fehlgeschlagen:', err);
+        $('mgrsZoneBand').value=$('mgrs100k').value=$('mgrsE').value=$('mgrsN').value=$('mgrsString').value="";
+        $('mgrsWarn').textContent = 'MGRS-Umrechnung fehlgeschlagen.';
+        $('mgrsWarn').style.display = 'block';
+      }
+    }
+    function updateFromMGRSInputs() {
+      if (typeof mgrs !== 'object') {
+        $('mgrsWarn').textContent = 'MGRS-Bibliothek nicht geladen.';
+        $('mgrsWarn').style.display = 'block';
+        return;
+      }
+      const zb = ($('mgrsZoneBand').value||'').toUpperCase().replace(/\s+/g,'').slice(0,3);
+      const k  = ($('mgrs100k').value||'').toUpperCase().replace(/\s+/g,'').slice(0,2);
+      const e  = ($('mgrsE').value||'').replace(/\D/g,'').slice(0,5);
+      const n  = ($('mgrsN').value||'').replace(/\D/g,'').slice(0,5);
+
+      $('mgrsZoneBand').value = zb; $('mgrs100k').value = k; $('mgrsE').value = e; $('mgrsN').value = n;
+
+      const spaced  = [zb, k, e, n].filter(Boolean).join(' ');
+      const compact = zb + k + e + n;
+      $('mgrsString').value = spaced;
+
+      if (zb && !k) { $('mgrsWarn').textContent = 'GZD erkannt – bitte 100km-Feld (z. B. NV) und Ost-/Nordwert eingeben.'; $('mgrsWarn').style.display = 'block'; return; }
+      if (zb && k && (!e || !n)) { $('mgrsWarn').textContent = '100km-Feld erkannt – bitte Ostwert/Nordwert (je 1–5 Ziffern, gleiche Länge) eingeben.'; $('mgrsWarn').style.display = 'block'; return; }
+      if (e && n && e.length !== n.length) { $('mgrsWarn').textContent = 'Ostwert/Nordwert müssen die gleiche Stellenzahl haben (1–5).'; $('mgrsWarn').style.display = 'block'; return; }
+      if ((compact||'').length < 7) { $('mgrsWarn').textContent = 'Bitte MGRS vollständig eingeben: z. B. 32U NV 12 34 … 32U NV 12345 67890.'; $('mgrsWarn').style.display = zb ? 'block' : 'none'; return; }
+
+      try {
+        let lonLat;
+        try { lonLat = mgrs.toPoint(compact); }
+        catch { lonLat = mgrs.toPoint(spaced); }
+        const [lon, lat] = lonLat;
+        setLatLng(lat, lon, 'mgrs');
+        $('mgrsWarn').style.display = 'none';
+      } catch (err) {
+        console.error('MGRS-Eingabe ungültig:', err, {spaced, compact});
+        $('mgrsWarn').textContent = 'MGRS-Eingaben ungültig – prüfe Zone+Band, 100km-Feld sowie E/N.';
+        $('mgrsWarn').style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
