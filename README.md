@@ -35,6 +35,11 @@ KoordinatenWerk ist ein webbasiertes Tool zur Umrechnung und Anzeige von geograf
 
 MIT License – siehe [LICENSE](LICENSE).
 
+## Screenshot
+
+<img width="1359" height="857" alt="grafik" src="https://github.com/user-attachments/assets/3218a10e-2a42-4abe-9a21-fab4108ebf39" />
+
+
 ---
 
 © 2025 Wolfgang Saal, Böllenborn  
