@@ -1,6 +1,10 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 
 # KoordinatenWerk
+
+<img width="326" height="92" alt="grafik" src="https://github.com/user-attachments/assets/998caf9f-866d-46e6-840b-5f82a85b84b4" />
+
+
 KoordinatenWerk: Umrechnung von Lat/Lng, UTM, MGRS und DMS. Suchen, finden und messen von Orten .
 
 # KoordinatenWerk
