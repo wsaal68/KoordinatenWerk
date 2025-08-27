@@ -16,6 +16,10 @@ KoordinatenWerk ist ein webbasiertes Tool zur Umrechnung und Anzeige von geograf
 - **Kopierfunktion:** Koordinaten einfach kopieren
 - **Responsive Design:** Optimiert für Desktop und Mobilgeräte
 
+## Installation
+
+Download index.html und die PNG-Dateien und speichere sie in einem Verzeichnis.
+
 ## Nutzung
 
 1. Öffne die [index.html](index.html) im Browser.
