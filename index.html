@@ -270,6 +270,43 @@
     #sec-utm .grid-4, #sec-mgrs .grid-4{ grid-template-columns: repeat(2, 1fr); }
     #sec-utm .row-2{ grid-template-columns: 1fr; align-items:stretch; }
   }
+
+/* === Taktische Zeit anpassen === */
+#tacTimeBox {
+  font-size: 14px;      
+  line-height: 1.2;
+  padding: 8px 12px;         /* mehr Innenabstand */
+  border-radius: 10px;       /* etwas runder */
+}
+
+/* Einzelteile */
+#tacTT {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+#tacHHMM {
+  font-size: 18px;           /* Uhrzeit etwas größer betonen */
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+
+#tacMMMJJ {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Mobile kleiner + schmalere Polsterung */
+@media (max-width: 480px) {
+  #tacTimeBox {
+    font-size: 12px;
+    padding: 6px 8px;        /* Box bleibt kompakt auf kleinen Screens */
+  }
+  #tacTT, #tacMMMJJ { font-size: 12px; }
+  #tacHHMM { font-size: 14px; }
+}
+
+
 </style>
 </head>
 <body>
