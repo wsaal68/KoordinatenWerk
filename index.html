@@ -25,73 +25,132 @@
 <style>
   :root{
     --panel-w: 460px;
-    --brand: #8fb4ff;
+    --brand: #8fb4ff;   /* UI-Brand */
+    --hud-blue: #9ec1ff;/* HUD-Label */
     --line:  #2b3446;
-    --grid:  #ff0000;             /* Rot */
-    --grid-label: rgb(0,0,160);   /* 0/0/160 */
+    --grid:  #ff0000;
+    --grid-label: rgb(0,0,160);
     --ctl-h: 40px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial, sans-serif;display:flex;height:100vh;background:#0e1420}
-  .panel{width:var(--panel-w);padding:20px;background:#121821;color:#fff;overflow-y:auto;flex-shrink:0}
+
+  /* Panel (links) */
+  .panel{
+    position: relative;
+    width: var(--panel-w);
+    padding:20px;
+    background:#121821;
+    color:#fff;
+    overflow-y:auto;
+    overflow-x:visible;
+    flex-shrink:0;
+    transition: transform .42s cubic-bezier(.22,.61,.36,1), margin-right .42s cubic-bezier(.22,.61,.36,1);
+    z-index: 1000;
+  }
+  /* Collapsed: visuell rausfahren + Layout-Platz freigeben */
+  body.panel-collapsed .panel{
+    transform: translateX(calc(-100% + 6px));
+    margin-right: calc(-1 * (var(--panel-w) - 6px)); /* gibt Kartenplatz frei */
+  }
+
+  /* Toggle-Griff (6 px sichtbar) */
+  #panelToggle{
+    position: fixed;
+    top: 50%;
+    left: calc(var(--panel-w) - 6px);
+    transform: translateY(-50%);
+    width: 20px;
+    height: 60px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid #2b3446; border-left:none;
+    border-radius:0 10px 10px 0;
+    background: var(--brand); color:#0e1420;
+    box-shadow:0 6px 16px rgba(0,0,0,.45);
+    cursor:pointer;
+    z-index:5000;
+    transition: left .42s cubic-bezier(.22,.61,.36,1), background .2s ease;
+  }
+  #panelToggle svg{ transition: transform .42s cubic-bezier(.22,.61,.36,1); }
+  #panelToggle:hover { filter:brightness(1.06); }
+  body.panel-collapsed #panelToggle{ left: 6px; }
+  body.panel-collapsed #panelToggle svg{ transform: rotate(180deg); }
+
+  /* Header fixiert + Logo */
+  header.brand{
+    position: sticky; top: 0; z-index: 1100;
+    display:flex;align-items:center;gap:12px;margin-bottom:14px;
+    background:#0f1626;
+    padding:6px 0 10px 0;
+    border-top:5px solid var(--line);
+    border-bottom:5px solid var(--line);
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  }
+  header.brand h1{font-size:20px;line-height:1;color:#fff;margin:0;}
+  header.brand small{opacity:.75;font-size:12px}
+  header.brand svg{width:56px;height:56px;flex:0 0 auto;display:block}
+
+  /* Taktische Zeit Styles – mit zweiter Zeile für lokale Zeit */
+  #tacTimeBox{
+    margin-left:auto;
+    display:flex;
+    flex-direction:column;      /* zweite Zeile */
+    align-items:flex-end;       /* rechtsbündig */
+    gap:4px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid #2b3446;
+    padding:6px 8px;
+    border-radius:8px;
+    font:14px/1.15 Arial,sans-serif;
+    white-space:nowrap;
+  }
+  #tacTimeBox .tac-row{
+    display:flex; align-items:baseline; gap:6px;
+  }
+  #tacTT{ color:#ffffff; font-weight:700; letter-spacing:.3px; font-size:14px; }
+  #tacHHMM{ color:var(--brand); font-weight:800; letter-spacing:.6px; font-size:18px; } /* größer */
+  #tacMMMJJ{ color:#ffffff; font-weight:700; letter-spacing:.3px; font-size:12px; }
+  #tacLocalTime{ color:#9aa6b2; font-size:12px; }  /* grau */
+  #tacLocalTime b{ font-weight:700; }              /* hh:mm fett */
+  #tacLocalTime .sec{ opacity:.9; }
+
   .card{margin-bottom:18px}
   .card h2{font-size:16px;margin-bottom:8px;color:var(--brand)}
   .card h3{font-size:13px;margin:10px 0 6px 0;color:#c9d3e0}
   .card input,.card select,.card button{
-    width:100%;padding:8px;margin-top:6px;background:#1d2430;color:#fff;border:1px solid #3a4354;border-radius:6px;
+    width:100%;padding:8px;margin-top:6px;background:#1b2430;color:#fff;border:1px solid #3a4354;border-radius:6px;
     min-height: var(--ctl-h);
-    transition: background-color .15s ease, transform .12s ease, filter .15s ease, box-shadow .15s ease;
+    transition: background-color .15s ease, transform .12s ease, filter .15s ease, box-shadow .15s ease, outline-color .1s ease;
   }
+  input:disabled { cursor:not-allowed; }
   .card button:hover, .copybtn:hover {
     filter: brightness(1.08);
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0,0,0,.25);
     color: #8fb4ff;
   }
+  /* Sichtbare Aktiv-Markierung für Mess-Modi (blauer Rahmen) */
+  .modeActive{ outline:2px solid #6ea8fe; }
 
   .grid{display:grid;gap:10px;grid-template-columns:repeat(4,1fr)}
   .grid-2{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
+  .grid-3{display:grid;gap:10px;grid-template-columns:repeat(3,1fr)}
   .grid-4{display:grid;gap:10px;grid-template-columns:repeat(4,1fr)}
+  .grid-5{display:grid;gap:10px;grid-template-columns: 50px 50px 70px 1fr 1fr; /* Zone, Band, Hem fix, Rest flexibel */}
   .row{display:grid;grid-template-columns:1fr;gap:8px}
   .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .btnrow-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .btnrow-3 {display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-  .map-wrap{flex-grow:1;position:relative}
-  #map{height:100%}
+  .btnrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+
   small.hint{opacity:.75}
+  .hint{ font-size:12px; }
   label{font-size:12px;color:#c9d3e0;white-space:nowrap}
   .warn{font-size:12px;color:#ffadad;margin-top:6px}
-
-  /* Header */
-  header.brand{
-    position: sticky; top: 0; z-index: 5;
-    display:flex;align-items:center;gap:12px;margin-bottom:14px;
-    background:#0f1626;
-    padding-bottom:10px; padding-top:6px;
-    border-top:5px solid var(--line);
-    border-bottom:5px solid var(--line);
-    box-shadow: 0 2px 6px rgba(0,0,0,.25);
-  }
-  header.brand svg{width:56px;height:56px;flex:0 0 auto;display:block}
-  header.brand h1{font-size:20px;line-height:1}
-  header.brand small{opacity:.75;font-size:12px}
-
   .divider{border:0;border-top:1px solid var(--line);opacity:.8;margin:12px 0}
 
   .wch{ width: calc(var(--ch, 14) * 1ch); }
   input[readonly]{ background:#1b2330; color:#bfcde0; border:1px solid #3a4354; }
-
-  .btnrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-  #measureInfo{font-size:12px;opacity:.9;margin-top:8px;line-height:1.4}
-  .modeActive{outline:2px solid #6ea8fe}
-
-  .legal-wrap{margin-top:14px}
-  .legal{
-    margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
-    background:#0f1622; font-size:12px;opacity:.95;display:flex;flex-wrap:wrap;gap:8px;
-  }
-  .legal a{color:var(--brand);text-decoration:none}
-  .legal a:hover{text-decoration:underline}
 
   .copyrow{display:flex; align-items:flex-end; gap:6px}
   .copyrow input[readonly]{flex:1; height: var(--ctl-h); min-width:0;}
@@ -105,161 +164,79 @@
   .copybtn.copied{ outline:2px solid var(--brand); }
   .copybtn svg{ width:16px; height:16px; stroke: var(--brand); fill:none; stroke-width:2; }
 
-  /* Raster-Beschriftung */
-  .grid-label{
-    color: var(--grid-label);
-    font: 11px/1.2 Arial, sans-serif;
-    white-space: nowrap;
+  /* Checkboxen kompakt + mobil-sicher */
+  .checkbox-row{display:flex;align-items:center;gap:14px;margin-top:8px;flex-wrap:wrap;}
+  .checkbox-row > div{display:flex;align-items:center;gap:8px;}
+  .checkbox-row input[type="checkbox"]{
+    -webkit-appearance:none;appearance:none;
+    width:18px;height:18px;flex:0 0 18px;
+    margin:0;padding:0;min-height:0;
+    border:2px solid #3a4354;border-radius:4px;background:#0f1622;cursor:pointer;position:relative;
   }
+  .checkbox-row input[type="checkbox"]::after{
+    content:"";position:absolute;inset:0;margin:auto;width:6px;height:10px;border-right:2px solid #0e1420;border-bottom:2px solid #0e1420;
+    transform:rotate(45deg) scale(0);transition:transform .12s ease;
+  }
+  .checkbox-row input[type="checkbox"]:checked{background:var(--brand);border-color:var(--brand);}
+  .checkbox-row input[type="checkbox"]:checked::after{transform:rotate(45deg) scale(1);}
+  .checkbox-row label{cursor:pointer;padding:6px 2px;}
 
+  /* Grid-Optionen zeigen/verbergen */
   #gridOptions{ transition: opacity .15s ease }
   #gridOptions.hidden{ opacity:.0; height:0; overflow:hidden; pointer-events:none }
 
-  /* Live-HUD */
-  .coord-hud{
-    position:absolute; left:8px; bottom:8px; z-index:1000;
-    background:rgba(15,22,34,.85); color:#e6efff; border:1px solid #2b3446; border-radius:8px;
-    padding:8px 10px; font:12px/1.35 Arial,sans-serif; white-space:nowrap; pointer-events:none;
+  /* Karte + Live-HUD */
+  .map-wrap{
+    flex-grow:1;
+    position:relative !important;
+    overflow:visible;
   }
-  .coord-hud .row{display:flex; align-items:center; gap:6px;}
-  .coord-hud b{ color:#9ec1ff; min-width:60px; text-align:left; }
+  #map{
+    height:100%;
+    position:relative;
+    z-index:1;
+  }
+  /* HUD robust über der Karte fixieren */
+  #coordHud.coord-hud{
+    position:absolute !important;
+    left:10px !important;
+    bottom:10px !important;
+    z-index: 10000 !important;
+    background:rgba(15,22,34,.85);
+    color:#e6efff;
+    border:1px solid #2b3446;
+    border-radius:8px;
+    padding:8px 10px;
+    font:12px/1.35 Arial,sans-serif;
+    white-space:nowrap;
+    pointer-events:none;
+  }
+  #coordHud .row{display:flex !important; align-items:center; gap:6px;}
+  #coordHud b{ color:var(--hud-blue); min-width:60px; text-align:left; }
 
-  /* Zoom-Badge */
+  /* Zoom-Badge im HUD-Style */
   .leaflet-control-zoominfo{
-    background:rgba(15,22,34,.85); color:#e6efff; border:1px solid #2b3446;
-    padding:4px 8px; border-radius:6px; font:12px/1 Arial,sans-serif; margin-top:4px;
+    background:rgba(15,22,34,.85);
+    color:#e6efff;
+    border:1px solid #2b3446;
+    padding:6px 10px;
+    border-radius:8px;
+    font:12px/1.2 Arial,sans-serif;
+    margin-top:4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
   }
+  .leaflet-control-zoominfo .lbl{ color:var(--hud-blue); font-weight:700; margin-right:6px; }
+  .leaflet-control-zoominfo .val{ font-weight:500; }
 
   /* Zoom-Limit Overlay */
   .zoom-notice{
-    position:absolute; top:10px; left:50%; transform:translateX(-50%);
-    z-index:1500; background:rgba(15,22,34,.95); color:#e6efff;
-    border:1px solid #2b3446; border-radius:8px; padding:6px 10px; font:12px/1 Arial,sans-serif;
+    position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:1500;
+    background:rgba(15,22,34,.95); color:#e6efff; border:1px solid #2b3446; border-radius:8px; padding:6px 10px; font:12px/1 Arial,sans-serif;
     display:none; pointer-events:none;
   }
 
-  /* Checkbox-Reihe */
-  .checkbox-row{
-    display:flex;
-    align-items:center;
-    gap:14px;
-    margin-top:8px;
-    flex-wrap:wrap;
-  }
-  .checkbox-row > div{
-    display:flex; align-items:center; gap:8px;
-    flex-wrap:nowrap;
-  }
-
-  /* === Mobile-sichere Checkboxen mit großem Touch-Target === */
-  .checkbox-row input[type="checkbox"]{
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    flex: 0 0 18px;
-    display: inline-block;
-    vertical-align: middle;
-    margin: 0;
-    padding: 0;
-    min-height: 0;
-    border: 2px solid #3a4354;
-    border-radius: 4px;
-    background: #0f1622;
-    position: relative;
-    cursor: pointer;
-    transition: box-shadow .12s ease, border-color .12s ease, background-color .12s ease, transform .12s ease;
-  }
-  .checkbox-row input[type="checkbox"]::after{
-    content: "";
-    position: absolute;
-    inset: 0;
-    margin: auto;
-    width: 6px;
-    height: 10px;
-    border-right: 2px solid #0e1420;
-    border-bottom: 2px solid #0e1420;
-    transform: rotate(45deg) scale(0);
-    transform-origin: center;
-    transition: transform .12s ease;
-  }
-  .checkbox-row input[type="checkbox"]:checked{
-    background: var(--brand, #8fb4ff);
-    border-color: var(--brand, #8fb4ff);
-  }
-  .checkbox-row input[type="checkbox"]:checked::after{
-    transform: rotate(45deg) scale(1);
-  }
-  .checkbox-row input[type="checkbox"]:focus-visible{
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(143,180,255,0.35);
-    border-color: var(--brand, #8fb4ff);
-  }
-  @media (hover:hover){
-    .checkbox-row input[type="checkbox"]{
-      /* optional: leichtes Hover */
-    }
-    .checkbox-row input[type="checkbox"]:hover{
-      border-color: #6a768d;
-    }
-  }
-  .checkbox-row input[type="checkbox"]:disabled{
-    opacity: .6;
-    cursor: not-allowed;
-  }
-  .checkbox-row label{
-    display: inline-block;
-    margin: 0;
-    line-height: 1.2;
-    cursor: pointer;
-    /* großes Touch-Target, ohne die Box optisch zu vergrößern */
-    padding: 12px 10px;
-    border-radius: 6px;
-  }
-  @media (max-width: 420px){
-    .checkbox-row{
-      gap:12px;
-    }
-    .checkbox-row > div{
-      gap:6px;
-    }
-    .checkbox-row input[type="checkbox"]{
-      width: 20px;
-      height: 20px;
-      flex-basis: 20px;
-    }
-    .checkbox-row label{
-      padding: 10px 8px;
-    }
-  }
-  /* === Ende Checkboxen === */
-
-  /* Spezifische Fixes: UTM & MGRS */
-  #sec-utm .grid-4{ grid-template-columns: 56px 64px 1fr 1fr; align-items: start; }
-  #utmZone { width:56px !important; min-width:56px; max-width:56px; text-align:center; }
-  #utmHem  { width:64px !important; min-width:64px; max-width:64px; text-align:center; }
-
-  #sec-utm .row-2{
-    display:grid;
-    grid-template-columns: 60px 1fr;
-    gap:10px;
-    align-items:end;
-  }
-  #utmBand{ width:60px !important; min-width:60px; max-width:60px; text-align:center; }
-  #utmString{ flex:1 1 auto; width:100% !important; min-width:0; }
-  #copyUtm{ flex:0 0 var(--ctl-h); width:var(--ctl-h); height:var(--ctl-h); padding:0; }
-
-  #sec-mgrs .grid-4{ grid-template-columns: 80px 64px 1fr 1fr; align-items:start; }
-  #mgrsZoneBand { width:80px !important; min-width:80px; max-width:80px; text-align:center; }
-  #mgrs100k     { width:64px !important; min-width:64px; max-width:64px; text-align:center; }
-
-  #utmOstwert, #utmNordwert, #mgrsE, #mgrsN{ width:100% !important; min-width:0; font-variant-numeric: tabular-nums; }
-
-  #sec-utm .grid-4 label,
-  #sec-mgrs .grid-4 label{ font-size:11px; line-height:1.2; }
-  #sec-utm .grid-4 > div,
-  #sec-mgrs .grid-4 > div{ min-width:0; }
-  .copyrow input[readonly]{ width:100% !important; }
+  /* Mess-Info mit mehr Abstand unterhalb der Buttons */
+  #measureInfo{ margin-top:10px; }
 
   @media (max-width: 520px){
     :root{ --panel-w: 100vw; }
@@ -270,48 +247,190 @@
     #sec-utm .grid-4, #sec-mgrs .grid-4{ grid-template-columns: repeat(2, 1fr); }
     #sec-utm .row-2{ grid-template-columns: 1fr; align-items:stretch; }
   }
-
-/* === Taktische Zeit anpassen === */
-#tacTimeBox {
-  font-size: 14px;      
-  line-height: 1.2;
-  padding: 8px 12px;         /* mehr Innenabstand */
-  border-radius: 10px;       /* etwas runder */
-}
-
-/* Einzelteile */
-#tacTT {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-#tacHHMM {
-  font-size: 18px;           /* Uhrzeit etwas größer betonen */
-  font-weight: 800;
-  letter-spacing: 0.6px;
-}
-
-#tacMMMJJ {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* Mobile kleiner + schmalere Polsterung */
-@media (max-width: 480px) {
-  #tacTimeBox {
-    font-size: 12px;
-    padding: 6px 8px;        /* Box bleibt kompakt auf kleinen Screens */
+  
+  /* Responsive UTM-Eingabe */
+  @media (max-width: 480px){
+  #sec-utm .grid-5{
+    grid-template-columns: repeat(3, 1fr); /* erst 3 Felder */
   }
-  #tacTT, #tacMMMJJ { font-size: 12px; }
-  #tacHHMM { font-size: 14px; }
+  #utmOstwert, #utmNordwert{
+    grid-column: span 3; /* nehmen volle Breite in der nächsten Zeile */
+  }
+  }
+
+  /* ===== Responsive Optimierungen (drop-in) ===== */
+
+/* 1) Eingabefelder: .wch soll niemals aus dem Grid laufen */
+.wch{ max-width:100%; }
+
+/* 2) Buttons automatisch umbrechen – sinnvoll auf schmalen Viewports */
+.btnrow,
+.btnrow-2,
+.btnrow-3{
+  display:grid;
+  grid-auto-rows: minmax(var(--ctl-h), auto);
+  grid-gap: 8px;
+}
+.btnrow{
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 920px){
+  .btnrow{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 720px){
+  .btnrow{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 460px){
+  .btnrow{ grid-template-columns: 1fr; }
 }
 
+/* 3) Karten-Panel: auf Tablet/Slim breiter, auf Phone volle Breite (bestehende Regel ergänzt) */
+@media (max-width: 980px){
+  :root{ --panel-w: 520px; }
+}
+@media (max-width: 760px){
+  :root{ --panel-w: 420px; }
+}
 
+/* 4) Map-Höhe auf sehr kleinen Displays etwas größer für bessere Nutzbarkeit */
+@media (max-width: 520px){
+  .map-wrap{ height: 60vh; } /* vorher 55vh */
+}
+
+/* 5) Typografie clampen: Überschriften & HUD leicht skalieren */
+header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
+.card h2{ font-size: clamp(15px, 1.9vw, 16px); }
+
+/* 6) Taktische Zeit – feinere Kontrolle je Breakpoint
+      (deine Basis-Styles bleiben bestehen, das hier passt nur Größen an) */
+#tacTimeBox{
+  gap: 6px;
+  font-size: clamp(14px, 1.9vw, 16px);
+}
+#tacTT    { font-size: 0.95em; }
+#tacHHMM  { font-size: 1.20em; }     /* HHMM etwas größer als Rest */
+#tacMMMJJ { font-size: 0.95em; }
+
+/* 7) UTM, MGRS, DMS Grids: früher umbrechen, Feldbreiten priorisieren */
+@media (max-width: 880px){
+  /* UTM: Zone/Band/Hem kompakter, Ost/Nord kriegen mehr Platz */
+  #sec-utm .grid-4{
+    grid-template-columns: 0.7fr 0.9fr 1.2fr 1.4fr; /* Zone, Hem, Ost, Nord */
+  }
+}
+@media (max-width: 720px){
+  #sec-utm .grid-4{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 420px){
+  #sec-utm .grid-4{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* MGRS: bei mittleren Breiten 2 Spalten, auf schmal sehr kompakt */
+@media (max-width: 880px){
+  #sec-mgrs .grid-4{ grid-template-columns: 0.9fr 0.9fr 1.1fr 1.1fr; }
+}
+@media (max-width: 720px){
+  #sec-mgrs .grid-4{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 420px){
+  #sec-mgrs .grid-4{ grid-template-columns: 1fr; }
+}
+
+/* DMS: schneller auf 2 Spalten und dann 1 Spalte fallen */
+@media (max-width: 880px){
+  #sec-dms .grid-4{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px){
+  #sec-dms .grid-4{ grid-template-columns: 1fr; }
+}
+
+/* 8) Labels & Hinweise auf kleinen Screens etwas kleiner, um Zeilenumbrüche zu reduzieren */
+@media (max-width: 480px){
+  label{ font-size: 11px; }
+  .hint{ font-size: 11px; }
+}
+
+/* 9) Live-HUD – Schrift minimal mit dem Viewport skalieren */
+#coordHud.coord-hud{
+  font-size: clamp(11px, 1.6vw, 12px);
+}
+#coordHud b{ min-width: 58px; }
+
+/* 10) Select- und Input-Padding auf Phones leicht reduzieren,
+       damit mehr Inhalt sichtbar bleibt */
+@media (max-width: 420px){
+  .card input, .card select, .card button{
+    padding: 7px;
+    min-height: calc(var(--ctl-h) - 4px);
+  }
+}
+
+/* 11) Checkbox-Row: engere Abstände auf kleinen Geräten */
+@media (max-width: 540px){
+  .checkbox-row{ gap: 10px; }
+  .checkbox-row label{ padding: 4px 2px; }
+}
+
+/* ===== Small-display responsive fix ===== */
+/* Tablet + Phone: Panel oben, Karte darunter; Karte stets sichtbar. */
+@media (max-width: 920px){
+  :root{ --panel-w: 100vw; }
+  body{ flex-direction: column; }
+  .panel{ width: 100%; }
+
+  /* Karte sichtbar halten */
+  .map-wrap{ height: 62vh; min-height: 280px; }
+  #map{ min-height: 280px; }
+
+  /* In Spaltenansicht Panel vertikal zuklappen (statt seitlich) */
+  body.panel-collapsed .panel{
+    transform: none;
+    margin-right: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    border-top-width: 0;
+    border-bottom-width: 0;
+  }
+
+  /* Toggle-Button oben rechts fixieren */
+  #panelToggle{
+    top: 10px;
+    left: auto;
+    right: 10px;
+    transform: none;
+    height: 36px;
+    width: 44px;
+    border-radius: 10px;
+  }
+  body.panel-collapsed #panelToggle{ right: 10px; left: auto; }
+  body.panel-collapsed #panelToggle svg{ transform: rotate(180deg); }
+}
+
+/* Feinjustage für sehr kleine Breiten */
+@media (max-width: 600px){
+  .map-wrap{ height: 64vh; min-height: 260px; }
+  #map{ min-height: 260px; }
+}
+/* Überschreibt die obige 920px-Regel für Phones (bewusst nachgelagert) */
+@media (max-width: 520px){
+  .map-wrap{ height: 60vh; min-height: 240px; }
+  #map{ min-height: 240px; }
+}
+@media (max-width: 420px){
+  .map-wrap{ height: 62vh; min-height: 220px; }
+  #map{ min-height: 220px; }
+}
 </style>
 </head>
 <body>
 
-  <div class="panel">
+  <div class="panel" id="leftPanel">
     <header class="brand">
       <!-- Logo -->
       <svg viewBox="0 0 96 96" role="img" aria-labelledby="logoTitle" xmlns="http://www.w3.org/2000/svg">
@@ -339,18 +458,31 @@
         </g>
         <circle cx="48" cy="48" r="2.2" fill="var(--brand)"/>
       </svg>
+      <!-- Titel -->
       <div>
         <h1 id="brand-title">KoordinatenWerk</h1>
         <small>Suchen • Finden • Messen</small><br>
         <small>THW OV Bad Bergzabern</small>
       </div>
+      <!-- Taktische Zeit (+ lokale Zeit) -->
+      <div id="tacTimeBox">
+        <div class="tac-row">
+          <span id="tacTT">--</span>
+          <span id="tacHHMM">----</span>
+          <span id="tacMMMJJ">---</span>
+        </div>
+        <div id="tacLocalTime">
+          <b id="ltHHMM">--:--</b><span class="sec" id="ltSS">:--</span>
+        </div>
+      </div>
     </header>
 
     <!-- Adresse / Geocoding -->
     <div class="card">
-      <h2>Adresse / Ort</h2>
+      <h2>Adresse / Ort / POI</h2>
       <form id="addrForm">
         <input id="addrQuery" type="text" placeholder="z. B. THW Bad Bergzabern"/>
+        <div id="addrHint" class="hint" style="display:none;margin-top:6px;"></div>
         <div class="btnrow-3" style="margin-top:8px">
             <button id="addrSearch" type="submit">Suchen</button>
             <button id="addrReset" type="button" title="Auf Startposition zurücksetzen">Reset</button>
@@ -377,9 +509,9 @@
           <select id="gridType">
             <option value="auto" selected>Auto (zoomabhängig)</option>
             <option value="none">Kein Raster</option>
-            <option value="utm1">UTM 1 km (Zoom 13 - 19)</option>
-            <option value="utm10">UTM 10 km (Zoom 9 - 19)</option>
-            <option value="mgrs100">MGRS 100 km (Zoom 5- 19)</option>
+            <option value="utm1">UTM 1 km (Zoom 13-19)</option>
+            <option value="utm10">UTM 10 km (Zoom 9-19)</option>
+            <option value="mgrs100">MGRS 100 km (Zoom 5-19)</option>
           </select>
         </div>
       </div>
@@ -408,54 +540,72 @@
         </div>
       </div>
 
-      <div class="checkbox-row" id="hudRow">
+      <!-- HUD-Checkbox -->
+      <div class="checkbox-row" id="hudRow" style="margin-top:8px">
         <div>
           <input id="hudToggle" type="checkbox" checked />
-          <label for="hudToggle">Live-HUD anzeigen</label>
+          <label for="hudToggle">Live-Koordinanten anzeigen</label>
         </div>
       </div>
     </div>
 
     <!-- UTM -->
+<!-- UTM -->
     <hr class="divider">
     <div class="card" id="sec-utm">
-      <h2>UTM Koordinaten</h2>
-      <div class="grid-4">
-        <div><label for="utmZone">Zone</label>
-          <input id="utmZone" class="wch" style="--ch:2" type="text" inputmode="numeric" maxlength="2" pattern="([1-9]|[1-5][0-9]|60)"/>
-        </div>
-        <div><label for="utmHem">Halbkugel</label>
-          <select id="utmHem" class="wch" style="--ch:2"><option value="N">N</option><option value="S">S</option></select>
-        </div>
-        <div><label for="utmOstwert">Ostwert (m)</label>
-          <input id="utmOstwert" class="wch" style="--ch:12" type="text" inputmode="numeric" maxlength="10" pattern="\d{5,6}"/>
-        </div>
-        <div><label for="utmNordwert">Nordwert (m)</label>
-          <input id="utmNordwert" class="wch" style="--ch:14" type="text" inputmode="numeric" maxlength="12" pattern="\d{1,8}"/>
-        </div>
-      </div>
+    <h2>UTM Koordinaten</h2>
 
-      <div class="row-2" style="margin-top:8px">
-        <div>
-          <label for="utmBand">Band</label>
-          <input id="utmBand" class="wch" style="--ch:2" type="text" readonly />
-        </div>
-        <div>
-          <label for="utmString">UTM Koordinate</label>
-          <div class="copyrow">
-            <input id="utmString" class="wch" style="--ch:50" type="text" readonly />
-            <button id="copyUtm" type="button" class="copybtn" title="UTM kopieren" aria-label="UTM kopieren">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="9" y="3" width="11" height="14" rx="2"></rect>
-                <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
+    <!-- eine Zeile mit 5 Spalten -->
+    <div class="grid-5">
+      <div>
+        <label for="utmZone">Zone</label>
+        <input id="utmZone" class="wch" style="--ch:2" type="text"
+               inputmode="numeric" maxlength="2"
+               pattern="([1-9]|[1-5][0-9]|60)"/>
       </div>
-
-      <div id="utmWarn" class="warn" style="display:none"></div>
+      <div>
+        <label for="utmBand">Band</label>
+        <input id="utmBand" class="wch" style="--ch:2" type="text" readonly />
+      </div>
+      <div>
+        <label for="utmHem">Halbkugel</label>
+        <select id="utmHem" class="wch" style="--ch:2">
+          <option value="N">N</option>
+          <option value="S">S</option>
+        </select>
+      </div>
+      <div>
+        <label for="utmOstwert">Ostwert (m)</label>
+        <input id="utmOstwert" class="wch" style="--ch:12" type="text"
+               inputmode="numeric" maxlength="10" pattern="\d{5,6}"/>
+      </div>
+      <div>
+        <label for="utmNordwert">Nordwert (m)</label>
+        <input id="utmNordwert" class="wch" style="--ch:14" type="text"
+               inputmode="numeric" maxlength="12" pattern="\d{1,8}"/>
+      </div>
     </div>
+
+    <!-- UTM-String + Kopierbutton -->
+    <div class="row-2" style="margin-top:8px">
+      <div style="grid-column: 1 / -1">
+        <label for="utmString">UTM Koordinate</label>
+        <div class="copyrow">
+          <input id="utmString" class="wch" style="--ch:50" type="text" readonly />
+          <button id="copyUtm" type="button" class="copybtn" title="UTM kopieren" aria-label="UTM kopieren">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+              <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="utmWarn" class="warn" style="display:none"></div>
+    </div>
+
+
 
     <!-- MGRS -->
     <hr class="divider">
@@ -496,11 +646,11 @@
       <h2>Dezimale Grad</h2>
       <div class="grid-2">
         <div>
-          <label for="lat">Breite (Lat)</label>
+          <label for="lat">Breite / Latitude (Lat)</label>
           <input id="lat" type="text" inputmode="decimal" maxlength="12" pattern="-?\d{1,2}(\.\d{1,6})?" />
         </div>
         <div>
-          <label for="lng">Länge (Lng)</label>
+          <label for="lng">Länge / Longitude (Lng)</label>
           <input id="lng" type="text" inputmode="decimal" maxlength="13" pattern="-?\d{1,3}(\.\d{1,6})?" />
         </div>
       </div>
@@ -512,7 +662,7 @@
       <h2>DMS (Grad ° / Minuten ′ / Sekunden ″)</h2>
       <small class="hint">Negative Grad setzen die Hemisphäre automatisch.</small>
 
-      <h3>Breite (Lat)</h3>
+      <h3>Breite / Latitude (Lat)</h3>
       <div class="grid-4">
         <div><label for="latDeg">Grad</label>
           <input id="latDeg" class="wch" style="--ch:3" type="text" inputmode="numeric" maxlength="3" pattern="-?\d{1,2}"/>
@@ -528,7 +678,7 @@
         </div>
       </div>
 
-      <h3 style="margin-top:10px">Länge (Lng)</h3>
+      <h3 style="margin-top:10px">Länge / Longitude (Lng)</h3>
       <div class="grid-4">
         <div><label for="lngDeg">Grad</label>
           <input id="lngDeg" class="wch" style="--ch:4" type="text" inputmode="numeric" maxlength="4" pattern="-?\d{1,3}"/>
@@ -546,6 +696,7 @@
     </div>
 
     <!-- Messen -->
+    <hr class="divider">
     <div class="card" id="sec-measure">
       <h2>Messen in der Karte</h2>
       <div class="btnrow">
@@ -558,22 +709,31 @@
 
       <div class="legal-wrap">
         <hr class="divider">
-        <div class="legal">
+        <div class="legal" style="margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#0f1622; font-size:12px;opacity:.95;display:flex;flex-wrap:wrap;gap:8px;">
           <span>© 2025 Wolfgang Saal, Böllenborn </span>
             <span>•</span> 
-            <a id="licLink" href="https://github.com/wsaal68/KoordinatenWerk/blob/main/LICENSE" target="_blank" rel="noopener">KIT-Lizenz</a>
+            <a id="licLink" href="https://github.com/wsaal68/KoordinatenWerk/blob/main/LICENSE" target="_blank" rel="noopener" style="color:var(--brand)">KIT-Lizenz</a>
             <span>•</span>
-            <a id="ghLink" href="https://github.com/wsaal68" target="_blank" rel="noopener">Download</a>
-          <span>Script für Technisches Hilfswerk Ortsverband Bad Bergzabern</span>
+            <a id="ghLink" href="https://github.com/wsaal68" target="_blank" rel="noopener" style="color:var(--brand)">Download</a>
+          <span>Erstellt für Technisches Hilfswerk Ortsverband Bad Bergzabern</span>
         </div>
       </div>
     </div>
+  </div> <!-- /panel -->
+
+  <!-- Toggle-Button -->
+  <div id="panelToggle" role="button" tabindex="0" aria-label="Seitenpanel ein- und ausblenden" title="Panel ein-/ausblenden">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="display:block">
+      <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
   </div>
 
+  <!-- Karte + HUD -->
   <div class="map-wrap">
-    <div id="map"></div>
+    <div id="map" role="region" aria-label="Karte"></div>
     <div id="zoomNotice" class="zoom-notice" role="status" aria-live="polite"></div>
-    <div id="coordHud" class="coord-hud" aria-live="polite">
+    <div id="coordHud" class="coord-hud">
+      <div class="row"><b>Live-Koordinanten</b></div>
       <div class="row"><b>Lat/Lng:</b><span id="hudDD">—</span></div>
       <div class="row"><b>UTM:</b><span id="hudUTM">—</span></div>
       <div class="row"><b>MGRS:</b><span id="hudMGRS">—</span></div>
@@ -612,32 +772,6 @@
     let baseOSM, baseSat, layerControl;
     let gridLayer = null;
 
-    /* Farbige Marker-Icons (CDNs) */
-    const iconMain = new L.Icon({
-      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
-    });
-    const iconDist = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
-    });
-    const iconArea = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41]
-    });
-
     const $ = id => document.getElementById(id);
     const normLngWrap = lng => ((Number(lng) + 540) % 360) - 180;
 
@@ -653,6 +787,23 @@
       const south = hemisphere === 'S' ? ' +south' : '';
       return `+proj=utm +zone=${zone}${south} +datum=WGS84 +units=m +no_defs +type=crs`;
     }
+
+    /* Marker-Icons */
+    const iconMain = new L.Icon({
+      iconUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+      shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]
+    });
+    const iconDist = new L.Icon({
+      iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+      shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]
+    });
+    const iconArea = new L.Icon({
+      iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+      shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+      iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]
+    });
 
     /* ===== Map & Layers ===== */
     function initMap(lat, lng) {
@@ -675,44 +826,37 @@
         { position: 'topright', collapsed: true }
       ).addTo(map);
 
-      // Map der Basiskarten → IDs für Spiegeln im Dropdown
-      const baseIdByLayer = new Map([
-        [baseOSM, 'osm'],
-        [baseSat, 'esri']
-      ]);
-
-      // Dropdown initial passend setzen
+      /* Sync: Leaflet-Control ↔ Dropdown */
       const baseSel = $('baseLayer');
+      const baseIdByLayer = new Map([[baseOSM,'osm'],[baseSat,'esri']]);
       if (baseSel) baseSel.value = map.hasLayer(baseSat) ? 'esri' : 'osm';
-
-      // Wechsel über Layer-Switcher spiegeln + Raster neu
       map.on('baselayerchange', (e) => {
         const val = baseIdByLayer.get(e.layer) || (map.hasLayer(baseSat) ? 'esri' : 'osm');
         if (baseSel && baseSel.value !== val) baseSel.value = val;
         redrawGridNow();
       });
 
-      // Zoom-Anzeige
+      /* Zoomanzeige im HUD-Look */
       const ZoomInfo = L.Control.extend({
         onAdd: function(){
           const d=document.createElement('div');
           d.className='leaflet-control-zoominfo';
           d.id='zoomInfo';
-          d.textContent='Zoom: ' + map.getZoom();
+          d.innerHTML = '<span class="lbl">Zoom:</span><span class="val">'+ map.getZoom() +'</span>';
           return d;
         }
       });
       (new ZoomInfo({position:'topleft'})).addTo(map);
 
       map.on('zoomend', ()=> {
-        const z=$('zoomInfo'); if(z) z.textContent='Zoom: ' + map.getZoom();
+        const z=$('zoomInfo'); if(z) z.innerHTML = '<span class="lbl">Zoom:</span><span class="val">'+ map.getZoom() +'</span>';
         enforceGridMinScale();
         refreshGridOptionsVisibility();
         updateGrid();
         handleZoomNotice(map.getZoom(), MIN_Z, MAX_Z);
       });
 
-      // Hauptmarker (blau)
+      /* Hauptmarker */
       marker = L.marker([lat, lng], { draggable: true, icon: iconMain }).addTo(map);
       marker.on('moveend', () => {
         const { lat, lng } = marker.getLatLng();
@@ -720,11 +864,11 @@
       });
       map.on('click', onMapClick);
 
-      // Live HUD
+      /* Live-HUD */
       map.on('mousemove', e => updateCoordHUD(e.latlng));
       updateCoordHUD({lat, lng});
 
-      // Raster bei Bewegungen neu (Auto-Modus)
+      /* Raster bei Bewegungen neu (Auto) */
       map.on('moveend', () => { if ($('gridType').value !== 'none') updateGrid(); });
 
       handleZoomNotice(map.getZoom(), MIN_Z, MAX_Z);
@@ -737,22 +881,14 @@
       box.style.display='none';
     }
 
-    /* Basiskarte umschalten + Raster sofort neu zeichnen */
     function switchBaseLayer(val){
       const wantSat = (val === 'esri');
       const hasOSM = map.hasLayer(baseOSM);
       const hasSat = map.hasLayer(baseSat);
-
-      if (wantSat){
-        if (hasOSM) map.removeLayer(baseOSM);
-        if (!hasSat) baseSat.addTo(map);
-      } else {
-        if (hasSat) map.removeLayer(baseSat);
-        if (!hasOSM) baseOSM.addTo(map);
-      }
+      if (wantSat){ if (hasOSM) map.removeLayer(baseOSM); if (!hasSat) baseSat.addTo(map); }
+      else { if (hasSat) map.removeLayer(baseSat); if (!hasOSM) baseOSM.addTo(map); }
       redrawGridNow();
     }
-
     function redrawGridNow(){ try { updateGrid(); } catch(e){ console.warn('updateGrid error', e); } }
 
     /* ===== DMS ===== */
@@ -832,8 +968,7 @@
       const N = parseInt($('utmNordwert').value, 10);
 
       $('utmString').value = (Number.isInteger(zone) && Number.isFinite(E) && Number.isFinite(N))
-        ? `${zone} ${$('utmBand').value || ''} ${E} ${N}`
-        : '';
+        ? `${zone} ${$('utmBand').value || ''} ${E} ${N}` : '';
 
       const eOK = Number.isFinite(E) && E >= 100000 && E <= 900000;
       const nOK = Number.isFinite(N) && N >= 0 && N <= 10000000;
@@ -875,21 +1010,39 @@
     }
     function computeAutoColors(){ return { line:'#ff0000', label:'rgb(0,0,160)' }; }
     function maybeApplyAutoContrast(){
-      const auto = $('gridAutoContrast').checked;
+      const auto = $('gridAutoContrast')?.checked;
       if (!auto) return;
       const { line, label } = computeAutoColors();
       document.documentElement.style.setProperty('--grid', line);
       document.documentElement.style.setProperty('--grid-label', label);
-      $('gridColor').value = '#ff0000';
-      $('gridLabelColor').value = '#0000a0';
+      if ($('gridColor')) $('gridColor').value = '#ff0000';
+      if ($('gridLabelColor')) $('gridLabelColor').value = '#0000a0';
     }
+
+    /* Tooltips + Sichtbarkeit/Disable für Grid-Optionen */
     function refreshGridOptionsVisibility(){
       const isNone = $('gridType').value === 'none';
       $('gridOptions').classList.toggle('hidden', isNone);
+
       const auto = $('gridAutoContrast').checked;
-      $('gridColor').disabled = isNone || auto;
-      $('gridLabelColor').disabled = isNone || auto;
+      const line = $('gridColor');
+      const labl = $('gridLabelColor');
+
+      const disabled = isNone || auto;
+      line.disabled = disabled;
+      labl.disabled = disabled;
+
+      if (auto){
+        const tip = 'Deaktiviert: „Kontrast automatisch“ ist aktiv. Schalte es aus, um Farben manuell zu wählen.';
+        line.title = tip; labl.title = tip;
+      } else if (isNone){
+        const tip = 'Deaktiviert: Raster ist ausgeschaltet. Wähle einen Rastertyp, um Farben zu ändern.';
+        line.title = tip; labl.title = tip;
+      } else {
+        line.title = ''; labl.title = '';
+      }
     }
+
     function enforceGridMinScale(){
       const z = map.getZoom();
       const sel = $('gridType'); if (!sel) return;
@@ -900,14 +1053,9 @@
     function updateGrid(){
       if (!gridLayer) gridLayer = L.layerGroup().addTo(map);
       gridLayer.clearLayers();
-
       let type = $('gridType').value;
       const z = map.getZoom();
-
-      if (type === 'auto'){
-        type = getAutoGridType(z);
-      }
-
+      if (type === 'auto') type = getAutoGridType(z);
       if (type === 'none') return;
       if (type === 'mgrs100' && typeof mgrs !== 'object') type = 'utm10';
       if (typeof proj4 !== 'function') return;
@@ -925,13 +1073,10 @@
         let Nmin = Math.min(sw[1], ne[1]), Nmax = Math.max(sw[1], ne[1]);
 
         const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim() || '#ff0000';
-
         const addLabel = (latlng, text) => {
           if (!$('gridLabelsChk').checked) return;
-          L.marker(latlng, {
-            interactive:false,
-            icon: L.divIcon({ className:'grid-label', html: text, iconAnchor:[0,0] })
-          }).addTo(gridLayer);
+          const html = `<span style="color: var(--grid-label); font: 11px/1.2 Arial, sans-serif; white-space: nowrap;">${text}</span>`;
+          L.marker(latlng, { interactive:false, icon: L.divIcon({ className:'', html, iconAnchor:[0,0] }) }).addTo(gridLayer);
         };
 
         const drawUtm = (stepMeters) => {
@@ -1035,18 +1180,12 @@
 
       if (mode==='distance') {
         $('measureInfo').innerHTML =
-          'Modus <b>Strecke</b>:<br>Jeder Klick fügt einen Punkt hinzu (max. 20). Entfernungsmessung vom ersten bis zum letzten Marker. ' +
-          'Marker sind per Drag&Drop verschiebbar. Rechtsklick entfernt einen Marker.<br>' +
-          '<b>Entfernen:</b> entfernt den zuletzt gesetzten Punkt (priorisiert diesen Modus).<br>' +
-          '<b>Löschen:</b> zuerst alle Punkte der Strecke, erneuter Klick löscht alle restlichen Messpunkte.<br>' +
-          '<b>Beenden:</b> erneut auf „Strecke“ klicken oder ESC.';
+          'Modus <b>Strecke</b>:<br>Klick fügt Punkt hinzu (max. 20). Drag&Drop möglich, Rechtsklick entfernt. <br>' +
+          '<b>Entfernen</b>: Entfernt den letzten Punkt.<br><b>Löschen</b>: Löscht zuerst die ganze Strecke, dann Fläche (sofern vorhanden).<br><b>Messung beenden</b>: erneut Button <b>Strecke</b> klicken oder ESC.';
       } else if (mode==='area') {
         $('measureInfo').innerHTML =
-          'Modus <b>Fläche</b>:<br> Jeder Klick fügt einen Punkt hinzu. Marker sind per Drag&Drop verschiebbar. ' +
-          'Fläche wird automatisch geschlossen. Rechtsklick entfernt einen Marker.<br>' +
-          '<b>Entfernen:</b> entfernt den zuletzt gesetzten Punkt (priorisiert diesen Modus).<br>' +
-          '<b>Löschen:</b> zuerst alle Punkte der Fläche, erneuter Klick löscht alle restlichen Messpunkte.<br>' +
-          '<b>Beenden:</b> erneut auf „Fläche“ klicken oder ESC.';
+          'Modus <b>Fläche</b>:<br>Klicks fügen Punkte hinzu (Drag&Drop, Rechtsklick entfernt). Polygon schließt automatisch. <br>' +
+          '<b>Entfernen</b>: Entfernt den letzten Punkt.<br><b>Löschen</b>: Löscht zuerst die ganze Fläche, dann Strecke (sofern verhanden).<br><b>Messung beenden</b>: erneut Button <b>Fläche</b> klicken oder ESC.';
       } else {
         $('measureInfo').innerHTML = '';
       }
@@ -1060,39 +1199,24 @@
       if (areaPoly) { map.removeLayer(areaPoly); areaPoly=null; }
       $('measureInfo').innerHTML = '';
     }
-
-    function removeAllDistance(){
-      distMarkers.forEach(m=>map.removeLayer(m)); distMarkers = [];
-      if (distLine){ map.removeLayer(distLine); distLine=null; }
-    }
-    function removeAllArea(){
-      areaMarkers.forEach(m=>map.removeLayer(m)); areaMarkers = [];
-      if (areaPoly){ map.removeLayer(areaPoly); areaPoly=null; }
-    }
+    function removeAllDistance(){ distMarkers.forEach(m=>map.removeLayer(m)); distMarkers = []; if (distLine){ map.removeLayer(distLine); distLine=null; } }
+    function removeAllArea(){ areaMarkers.forEach(m=>map.removeLayer(m)); areaMarkers = []; if (areaPoly){ map.removeLayer(areaPoly); areaPoly=null; } }
     function hasDist(){ return distMarkers.length>0; }
     function hasArea(){ return areaMarkers.length>0; }
     function hasAny(){ return hasDist() || hasArea(); }
 
     function clearMeasureSmart(){
       if (!hasAny()) return;
-
       if (!stagedClear){
-        if (measureMode==='distance' && hasDist()){
-          removeAllDistance();
-        } else if (measureMode==='area' && hasArea()){
-          removeAllArea();
-        } else if (hasDist()){
-          removeAllDistance();
-        } else if (hasArea()){
-          removeAllArea();
-        }
+        if (measureMode==='distance' && hasDist()) removeAllDistance();
+        else if (measureMode==='area' && hasArea()) removeAllArea();
+        else if (hasDist()) removeAllDistance();
+        else if (hasArea()) removeAllArea();
         stagedClear = true;
       } else {
-        clearMeasure();
-        stagedClear = false;
+        clearMeasure(); stagedClear = false;
       }
-      updateDistance();
-      updateArea();
+      updateDistance(); updateArea();
     }
 
     function updateDistance(){
@@ -1100,7 +1224,7 @@
       if (n < 1){
         if (distLine){ map.removeLayer(distLine); distLine = null; }
         if (measureMode==='distance'){
-          $('measureInfo').innerHTML = 'Punkte setzen, um eine Strecke zu bilden.<br><b>Entfernen</b> = letzten Punkt, <b>Löschen</b> = erst Strecke, dann alles.';
+          $('measureInfo').innerHTML = 'Punkte setzen, um eine Strecke zu bilden. <b>Entfernen</b>=letzter Punkt, <b>Löschen</b>=erst Strecke, dann alles.';
         }
         return;
       }
@@ -1124,7 +1248,6 @@
         }
       }
     }
-
     function attachDistMarker(m){
       m.on('drag', updateDistance);
       const rm = () => {
@@ -1136,7 +1259,6 @@
       m.on('dblclick', rm);
       return m;
     }
-
     function handleDistanceClick(latlng){
       if (distMarkers.length >= DIST_MAX_POINTS){
         if (measureMode==='distance'){
@@ -1163,13 +1285,12 @@
       let per = 0; for (let i=0;i<n;i++){ per += latlngs[i].distanceTo(latlngs[(i+1)%n]); }
       return { area, perimeter: per };
     }
-
     function updateArea(){
       const latlngs = areaMarkers.map(m=>m.getLatLng());
       if (latlngs.length===0){
         if (areaPoly){ map.removeLayer(areaPoly); areaPoly=null; }
         if (measureMode==='area'){
-          $('measureInfo').innerHTML='Punkte setzen, um ein Polygon zu bilden.<br><b>Entfernen</b> = letzten Punkt, <b>Löschen</b> = erst Fläche, dann alles.';
+          $('measureInfo').innerHTML='Punkte setzen, um ein Polygon zu bilden. <b>Entfernen</b>=letzter Punkt, <b>Löschen</b>=erst Fläche, dann alles.';
         }
         return;
       }
@@ -1187,7 +1308,6 @@
         }
       }
     }
-
     function handleAreaClick(latlng){
       const m = L.marker(latlng, {draggable:true, icon: iconArea}).addTo(map);
       m.on('drag', updateArea);
@@ -1225,7 +1345,7 @@
       if (hud) hud.style.display = on ? 'block' : 'none';
     }
 
-    /* ===== Sync & Geocoding & Inputs ===== */
+    /* ===== Sync & Geocoding ===== */
     function setLatLng(lat, lng, src="") {
       lat = Math.max(-90, Math.min(90, Number(lat)));
       lng = normLngWrap(lng);
@@ -1241,141 +1361,33 @@
 
     async function doSearch(){
       const q = $('addrQuery').value.trim();
-      const sel = $('addrResults'); sel.style.display='none'; sel.innerHTML='';
+      const sel = $('addrResults');
+      const hint = $('addrHint');
+      sel.style.display='none'; sel.innerHTML='';
+      hint.style.display='none'; hint.textContent='';
+
       if (!q) return;
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&addressdetails=1&limit=5`, { headers:{'Accept-Language':'de'} });
         const data = await res.json();
-        if (!Array.isArray(data) || data.length===0) return;
+        if (!Array.isArray(data) || data.length===0){
+          hint.textContent = 'Kein Treffer gefunden. Bitte Suchbegriff anpassen.';
+          hint.style.display='block';
+          return;
+        }
         sel.style.display='block';
         sel.innerHTML = data.map((d,i)=>`<option value="${i}">${d.display_name}</option>`).join('');
         sel.onchange = () => { const d = data[Number(sel.value)]; if (d) setLatLng(parseFloat(d.lat), parseFloat(d.lon), 'addr'); };
         const first = data[0];
         setLatLng(parseFloat(first.lat), parseFloat(first.lon), 'addr');
-      } catch(e){ console.warn('Geocoding fehlgeschlagen', e); }
+      } catch(e){
+        console.warn('Geocoding fehlgeschlagen', e);
+        hint.textContent = 'Suche momentan nicht erreichbar. Bitte später erneut versuchen.';
+        hint.style.display='block';
+      }
     }
 
-    /* ===== Events ===== */
-    document.addEventListener('DOMContentLoaded', async () => {
-      const START_LAT = 49.0954122;
-      const START_LNG = 8.0038251;
-
-      initMap(START_LAT, START_LNG);
-
-      const ok = await mgrsReady.catch(()=>false);
-      if (!ok) {
-        $('mgrsWarn').textContent = 'MGRS konnte nicht geladen werden (CDN/MIME-Blockierung).';
-        $('mgrsWarn').style.display = 'block';
-      } else {
-        try {
-          const { lat, lng } = marker.getLatLng();
-          setMGRSFieldsFromLatLng(lat, lng);
-          redrawGridNow();
-        } catch(e){ console.warn('Post-MGRS init failed', e); }
-      }
-
-      setLatLng(START_LAT, START_LNG, 'init');
-
-      // HUD
-      $('hudToggle').addEventListener('change', refreshHudVisibility);
-      refreshHudVisibility();
-
-      // Suche
-      $('addrForm').addEventListener('submit', (e)=>{ e.preventDefault(); doSearch(); });
-      $('addrSearch').addEventListener('click', (e)=>{ e.preventDefault(); doSearch(); });
-      $('addrReset').addEventListener('click', () => {
-        $('addrQuery').value = ""; $('addrResults').innerHTML = ""; $('addrResults').style.display = 'none';
-        setLatLng(START_LAT, START_LNG, 'reset');
-        redrawGridNow();
-      });
-      $('addrCenter').addEventListener('click', () => {
-        if (marker && map) {
-          const ll = marker.getLatLng();
-          map.panTo(ll, { animate:true });
-        }
-      });
-
-      /* DD (lat/lng) */
-      $('lat').addEventListener('input', ()=> {
-        try{
-          $('lat').value = $('lat').value.replace(/[^0-9.\-]/g,'').slice(0, $('lat').maxLength);
-          const la = parseFloat($('lat').value), lo = parseFloat($('lng').value);
-          if (!Number.isNaN(la) && !Number.isNaN(lo)) { setLatLng(la, lo, 'dd'); redrawGridNow(); }
-        }catch(e){ console.warn('lat input error', e); }
-      });
-      $('lng').addEventListener('input', ()=> {
-        try{
-          $('lng').value = $('lng').value.replace(/[^0-9.\-]/g,'').slice(0, $('lng').maxLength);
-          const la = parseFloat($('lat').value), lo = parseFloat($('lng').value);
-          if (!Number.isNaN(la) && !Number.isNaN(lo)) { setLatLng(la, lo, 'dd'); redrawGridNow(); }
-        }catch(e){ console.warn('lng input error', e); }
-      });
-
-      /* DMS */
-      ['latDeg','latMin','latSec','latHem','lngDeg','lngMin','lngSec','lngHem'].forEach(id=>{
-        $(id).addEventListener('input', ()=>{
-          try{
-            const la = fromDMS($('latDeg').value, $('latMin').value, $('latSec').value, $('latHem').value, true);
-            const lo = fromDMS($('lngDeg').value, $('lngMin').value, $('lngSec').value, $('lngHem').value, false);
-            if (la==null || lo==null) return;
-            setLatLng(la, lo, 'dms');
-            redrawGridNow();
-          }catch(e){ console.warn('dms input error', e); }
-        });
-      });
-
-      /* UTM */
-      ['utmZone','utmHem','utmOstwert','utmNordwert'].forEach(id=> {
-        $(id).addEventListener('input', ()=>{
-          try{ updateFromUTMInputs(); redrawGridNow(); }
-          catch(e){ console.warn('utm input error', e); }
-        });
-      });
-      $('utmHem').addEventListener('change', ()=> setUtmNordMaxLen($('utmHem').value));
-
-      /* MGRS */
-      function updateFromMGRSInputsSafe(){
-        try{ updateFromMGRSInputs(); redrawGridNow(); }
-        catch(e){ console.warn('mgrs input error', e); }
-      }
-      ['mgrsZoneBand','mgrs100k','mgrsE','mgrsN'].forEach(id=> $(id).addEventListener('input', updateFromMGRSInputsSafe));
-
-      /* Copy-Buttons */
-      $('copyUtm').addEventListener('click', (e)=>copyById('utmString', e.currentTarget));
-      $('copyMgrs').addEventListener('click', (e)=>copyById('mgrsString', e.currentTarget));
-
-      /* Messen */
-      $('measureDist').addEventListener('click', ()=> setMode('distance'));
-      $('measureArea').addEventListener('click', ()=> setMode('area'));
-      $('measureClear').addEventListener('click', (e)=>{ e.preventDefault(); clearMeasureSmart(); });
-      $('measureUndo').addEventListener('click', (e)=>{ e.preventDefault(); undoLastMarker(); });
-
-      // ESC beendet Messung
-      document.addEventListener('keydown', (e)=>{
-        if (e.key === 'Escape'){
-          if (measureMode!=='none'){ setMode(measureMode); }
-        }
-      });
-
-      /* Basiskarte + Raster-UI */
-      $('baseLayer').addEventListener('change', e => switchBaseLayer(e.target.value));
-      $('gridType').addEventListener('change', ()=>{ refreshGridOptionsVisibility(); enforceGridMinScale(); redrawGridNow(); });
-      $('gridLabelsChk').addEventListener('change', redrawGridNow);
-
-      const pickerLine = $('gridColor');
-      const pickerLbl  = $('gridLabelColor');
-      pickerLine.addEventListener('input', (e)=>{ document.documentElement.style.setProperty('--grid', e.target.value); redrawGridNow(); });
-      pickerLbl.addEventListener('input', (e)=>{ document.documentElement.style.setProperty('--grid-label', e.target.value); redrawGridNow(); });
-
-      $('gridAutoContrast').addEventListener('change', ()=>{ refreshGridOptionsVisibility(); maybeApplyAutoContrast(); redrawGridNow(); });
-
-      refreshGridOptionsVisibility();
-      maybeApplyAutoContrast();
-      enforceGridMinScale();
-      updateGrid();
-    });
-
-    /* Kopieren-Helfer */
+    /* ===== Copy & Undo ===== */
     function copyById(id, btn){
       const el = document.getElementById(id);
       const txt = (el && 'value' in el) ? el.value : '';
@@ -1389,8 +1401,6 @@
         el.select?.(); document.execCommand?.('copy');
       }
     }
-
-    /* Entfernen: letzten Punkt löschen */
     function undoLastMarker(){
       const removeLast = (arr) => {
         if (!arr.length) return false;
@@ -1483,73 +1493,192 @@
       }
     }
 
-    /* ===== Taktische Zeit ===== */
+    /* ===== Taktische Zeit + lokale Zeit ===== */
     (function(){
       const WEEK_TT  = ['SO','MO','DI','MI','DO','FR','SA'];
       const MONTH_MM = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
       const pad2 = n => String(n).padStart(2, '0');
 
-      function formatTac(d){
-        return {
-          tt:   WEEK_TT[d.getDay()],
-          hhmm: pad2(d.getHours()) + pad2(d.getMinutes()),
-          mmm:  MONTH_MM[d.getMonth()],
-          jj:   String(d.getFullYear()).slice(-2),
-        };
-      }
-
-      function ensureTacBox(){
-        const header = document.querySelector('header.brand') || document.querySelector('header');
-        if (!header) return null;
-
-        let box = document.getElementById('tacTimeBox');
-        if (box) return box;
-
-        box = document.createElement('div');
-        box.id = 'tacTimeBox';
-        box.setAttribute('aria-label', 'Taktische Zeit');
-        box.style.cssText = [
-          'margin-left:auto','display:flex','gap:6px','align-items:baseline',
-          'background:rgba(255,255,255,0.06)','border:1px solid #2b3446',
-          'padding:6px 8px','border-radius:8px','font:16px/1.1 Arial,sans-serif','white-space:nowrap'
-        ].join(';');
-
-        const sTT   = document.createElement('span');
-        const sHHMM = document.createElement('span');
-        const sMJ   = document.createElement('span');
-
-        sTT.id = 'tacTT';
-        sHHMM.id = 'tacHHMM';
-        sMJ.id = 'tacMMMJJ';
-
-        sTT.style.cssText   = 'color:#ffffff;font-weight:700;letter-spacing:.3px;';
-        sHHMM.style.cssText = 'color:var(--brand, #8fb4ff);font-weight:800;letter-spacing:.6px;';
-        sMJ.style.cssText   = 'color:#ffffff;font-weight:700;letter-spacing:.3px;';
-
-        box.appendChild(sTT);
-        box.appendChild(sHHMM);
-        box.appendChild(sMJ);
-
-        header.appendChild(box);
-        return box;
-      }
-
       function renderTac(){
-        const box = ensureTacBox();
-        if (!box) return;
-        const { tt, hhmm, mmm, jj } = formatTac(new Date());
-        const sTT   = document.getElementById('tacTT');
-        const sHHMM = document.getElementById('tacHHMM');
-        const sMJ   = document.getElementById('tacMMMJJ');
+        const d = new Date();
+        const tt = WEEK_TT[d.getDay()];
+        const hh   = pad2(d.getHours());
+        const mm   = pad2(d.getMinutes());
+        const ss   = pad2(d.getSeconds());
+        const hhmm = hh + mm;
+        const mmm  = MONTH_MM[d.getMonth()];
+        const jj   = String(d.getFullYear()).slice(-2);
+
+        // Taktische Zeit
+        const sTT   = $('tacTT');
+        const sHHMM = $('tacHHMM');
+        const sMJ   = $('tacMMMJJ');
         if (sTT)   sTT.textContent = tt;
         if (sHHMM) sHHMM.textContent = hhmm;
-        if (sMJ)   sMJ.textContent = `${mmm} ${jj}`;
-      }
+        if (sMJ)   sMJ.textContent  = `${mmm} ${jj}`;
 
+        // Lokale Zeit hh:mm:ss
+        const ltHM = $('ltHHMM');
+        const ltSS = $('ltSS');
+        if (ltHM) ltHM.textContent = `${hh}:${mm}`;
+        if (ltSS) ltSS.textContent = `:${ss}`;
+      }
       renderTac();
       setInterval(renderTac, 1000);
     })();
-    /* ===== Ende Taktische Zeit ===== */
+
+    /* ===== Init & Events ===== */
+    document.addEventListener('DOMContentLoaded', async () => {
+      const START_LAT = 49.0954122;
+      const START_LNG = 8.0038251;
+
+      initMap(START_LAT, START_LNG);
+
+      const ok = await mgrsReady.catch(()=>false);
+      if (!ok) {
+        const w = $('mgrsWarn'); if (w){ w.textContent = 'MGRS konnte nicht geladen werden (CDN/MIME-Blockierung).'; w.style.display = 'block'; }
+      } else {
+        try {
+          const { lat, lng } = marker.getLatLng();
+          setMGRSFieldsFromLatLng(lat, lng);
+          redrawGridNow();
+        } catch(e){ console.warn('Post-MGRS init failed', e); }
+      }
+
+      setLatLng(START_LAT, START_LNG, 'init');
+
+      // HUD
+      $('hudToggle').addEventListener('change', refreshHudVisibility);
+      refreshHudVisibility();
+
+      // Geocoding
+      $('addrForm').addEventListener('submit', (e)=>{ e.preventDefault(); doSearch(); });
+      $('addrSearch').addEventListener('click', (e)=>{ e.preventDefault(); doSearch(); });
+      $('addrReset').addEventListener('click', () => {
+        $('addrQuery').value = "";
+        $('addrResults').innerHTML = ""; $('addrResults').style.display = 'none';
+        $('addrHint').style.display='none'; $('addrHint').textContent='';
+        setLatLng(START_LAT, START_LNG, 'reset'); redrawGridNow();
+      });
+      $('addrCenter').addEventListener('click', () => {
+        if (marker && map) { const ll = marker.getLatLng(); map.panTo(ll, { animate:true }); }
+      });
+
+      // DD
+      $('lat').addEventListener('input', ()=> {
+        try{
+          $('lat').value = $('lat').value.replace(/[^0-9.\-]/g,'').slice(0, $('lat').maxLength);
+          const la = parseFloat($('lat').value), lo = parseFloat($('lng').value);
+          if (!Number.isNaN(la) && !Number.isNaN(lo)) { setLatLng(la, lo, 'dd'); redrawGridNow(); }
+        }catch(e){ console.warn('lat input error', e); }
+      });
+      $('lng').addEventListener('input', ()=> {
+        try{
+          $('lng').value = $('lng').value.replace(/[^0-9.\-]/g,'').slice(0, $('lng').maxLength);
+          const la = parseFloat($('lat').value), lo = parseFloat($('lng').value);
+          if (!Number.isNaN(la) && !Number.isNaN(lo)) { setLatLng(la, lo, 'dd'); redrawGridNow(); }
+        }catch(e){ console.warn('lng input error', e); }
+      });
+
+      // DMS
+      ['latDeg','latMin','latSec','latHem','lngDeg','lngMin','lngSec','lngHem'].forEach(id=>{
+        $(id).addEventListener('input', ()=>{
+          try{
+            const la = fromDMS($('latDeg').value, $('latMin').value, $('latSec').value, $('latHem').value, true);
+            const lo = fromDMS($('lngDeg').value, $('lngMin').value, $('lngSec').value, $('lngHem').value, false);
+            if (la==null || lo==null) return;
+            setLatLng(la, lo, 'dms'); redrawGridNow();
+          }catch(e){ console.warn('dms input error', e); }
+        });
+      });
+
+      // UTM
+      ['utmZone','utmHem','utmOstwert','utmNordwert'].forEach(id=> {
+        $(id).addEventListener('input', ()=>{ try{ updateFromUTMInputs(); redrawGridNow(); }catch(e){ console.warn('utm input error', e); } });
+      });
+      $('utmHem').addEventListener('change', ()=> setUtmNordMaxLen($('utmHem').value));
+
+      // MGRS
+      function updateFromMGRSInputsSafe(){
+        try{ updateFromMGRSInputs(); redrawGridNow(); } catch(e){ console.warn('mgrs input error', e); }
+      }
+      ['mgrsZoneBand','mgrs100k','mgrsE','mgrsN'].forEach(id=> $(id).addEventListener('input', updateFromMGRSInputsSafe));
+
+      // Copy
+      $('copyUtm').addEventListener('click', (e)=>copyById('utmString', e.currentTarget));
+      $('copyMgrs').addEventListener('click', (e)=>copyById('mgrsString', e.currentTarget));
+
+      // Messen
+      $('measureDist').addEventListener('click', ()=> setMode('distance'));
+      $('measureArea').addEventListener('click', ()=> setMode('area'));
+      $('measureClear').addEventListener('click', (e)=>{ e.preventDefault(); clearMeasureSmart(); });
+      $('measureUndo').addEventListener('click', (e)=>{ e.preventDefault(); undoLastMarker(); });
+
+      // ESC beendet Messung
+      document.addEventListener('keydown', (e)=>{
+        if (e.key === 'Escape'){
+          if (measureMode!=='none'){ setMode(measureMode); }
+        }
+      });
+
+      // Basiskarte + Raster-UI
+      $('baseLayer').addEventListener('change', e => switchBaseLayer(e.target.value));
+      $('gridType').addEventListener('change', ()=>{ refreshGridOptionsVisibility(); enforceGridMinScale(); redrawGridNow(); });
+      $('gridLabelsChk').addEventListener('change', redrawGridNow);
+      const pickerLine = $('gridColor');
+      const pickerLbl  = $('gridLabelColor');
+      pickerLine.addEventListener('input', (e)=>{ document.documentElement.style.setProperty('--grid', e.target.value); redrawGridNow(); });
+      pickerLbl.addEventListener('input', (e)=>{ document.documentElement.style.setProperty('--grid-label', e.target.value); redrawGridNow(); });
+      $('gridAutoContrast').addEventListener('change', ()=>{ refreshGridOptionsVisibility(); maybeApplyAutoContrast(); redrawGridNow(); });
+
+      // initial
+      refreshGridOptionsVisibility();
+      maybeApplyAutoContrast();
+      enforceGridMinScale();
+      updateGrid();
+
+      /* Panel-Toggle mit Map-Resize */
+      const panel  = $('leftPanel');
+      const toggle = $('panelToggle');
+
+      function invalidateMapSafely() { try { map?.invalidateSize({ animate: true }); } catch {} }
+
+      function applyPanelState(collapsed){
+        document.body.classList.toggle('panel-collapsed', collapsed);
+        localStorage.setItem('kw_panel_collapsed', collapsed ? '1' : '0');
+
+        // Mehrfach invalidieren (vor, während, nach der Transition)
+        invalidateMapSafely();
+        setTimeout(invalidateMapSafely, 60);
+        const onEnd = (e) => {
+          if (e.target === panel && e.propertyName === 'transform') {
+            invalidateMapSafely();
+            panel.removeEventListener('transitionend', onEnd, true);
+          }
+        };
+        panel.addEventListener('transitionend', onEnd, true);
+        setTimeout(invalidateMapSafely, 480);
+      }
+
+      toggle.addEventListener('click', () => {
+        const collapsed = !document.body.classList.contains('panel-collapsed');
+        applyPanelState(collapsed);
+      });
+      toggle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const collapsed = !document.body.classList.contains('panel-collapsed');
+          applyPanelState(collapsed);
+        }
+      });
+
+      const saved = localStorage.getItem('kw_panel_collapsed');
+      if (saved === '1') {
+        document.body.classList.add('panel-collapsed');
+        setTimeout(invalidateMapSafely, 60);
+        setTimeout(invalidateMapSafely, 500);
+      }
+    });
   </script>
 </body>
 </html>
