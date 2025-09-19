@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>KoordinatenWerk</title>
 
+<script>
+const APP_VERSION = 'v3.3.3';
+const APP_DATE    = '2025-09-19';
+</script>
+
+
 <!-- Favicons -->
 <link rel="icon" type="image/png" href="koordinatenwerk_logo_favicon.png" sizes="64x64">
 <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -12,12 +18,15 @@
 
 <!-- Basis-Metadaten -->
 <meta name="description" content="KoordinatenWerk: Umrechnung von Lat/Lng, UTM, MGRS und DMS. Suchen, finden und messen von Orten – entwickelt für THW OV Bad Bergzabern." />
-<meta name="author" content="Wolfgang 'Wolle' Saal, Böllenborn" />
-<meta name="keywords" content="Koordinaten, GPS, UTM, MGRS, DMS, THW, Bad Bergzabern, Karte, Messen, Geocoding" />
+<meta name="author" content="Wolfgang Saal, Böllenborn" />
+<meta name="keywords" content="Koordinaten, GPS, UTM, MGRS, DMS, THW, Bad Bergzabern, Karte, Messen, Geocoding, messen, Strecke, Fläche, Feuerwehr, Krankenhaus, Hospital, Polizei, Marker, Einsatz, Planung, OZAB, Einsatzplanung, Zivilschutz, Katastrophenschutz" />
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <!-- proj4 (UTM via +proj-Strings) -->
 <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
@@ -25,17 +34,16 @@
 <style>
   :root{
     --panel-w: 460px;
-    --brand: #8fb4ff;   /* UI-Brand */
-    --hud-blue: #9ec1ff;/* HUD-Label */
+    --brand: #8fb4ff;
+    --hud-blue: #9ec1ff;
     --line:  #2b3446;
     --grid:  #ff0000;
-    --grid-label: rgb(0,0,160);
+    --grid-label: #0000a0;
     --ctl-h: 40px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial, sans-serif;display:flex;height:100vh;background:#0e1420}
 
-  /* Panel (links) */
   .panel{
     position: relative;
     width: var(--panel-w);
@@ -48,13 +56,10 @@
     transition: transform .42s cubic-bezier(.22,.61,.36,1), margin-right .42s cubic-bezier(.22,.61,.36,1);
     z-index: 1000;
   }
-  /* Collapsed: visuell rausfahren + Layout-Platz freigeben */
   body.panel-collapsed .panel{
     transform: translateX(calc(-100% + 6px));
-    margin-right: calc(-1 * (var(--panel-w) - 6px)); /* gibt Kartenplatz frei */
+    margin-right: calc(-1 * (var(--panel-w) - 6px));
   }
-
-  /* Toggle-Griff (6 px sichtbar) */
   #panelToggle{
     position: fixed;
     top: 50%;
@@ -76,7 +81,6 @@
   body.panel-collapsed #panelToggle{ left: 6px; }
   body.panel-collapsed #panelToggle svg{ transform: rotate(180deg); }
 
-  /* Header fixiert + Logo */
   header.brand{
     position: sticky; top: 0; z-index: 1100;
     display:flex;align-items:center;gap:12px;margin-bottom:14px;
@@ -90,29 +94,26 @@
   header.brand small{opacity:.75;font-size:12px}
   header.brand svg{width:56px;height:56px;flex:0 0 auto;display:block}
 
-  /* Taktische Zeit Styles – mit zweiter Zeile für lokale Zeit */
   #tacTimeBox{
     margin-left:auto;
-    display:flex;
-    flex-direction:column;      /* zweite Zeile */
-    align-items:flex-end;       /* rechtsbündig */
-    gap:4px;
-    background:rgba(255,255,255,0.06);
-    border:1px solid #2b3446;
-    padding:6px 8px;
-    border-radius:8px;
-    font:14px/1.15 Arial,sans-serif;
-    white-space:nowrap;
+    display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+    background:rgba(255,255,255,0.06); border:1px solid #2b3446; padding:6px 8px; border-radius:8px;
+    font:14px/1.15 Arial,sans-serif; white-space:nowrap;
   }
-  #tacTimeBox .tac-row{
-    display:flex; align-items:baseline; gap:6px;
+  #tacTimeBox .tac-row{ display:flex; align-items:baseline; gap:6px; }
+  #tacTimeBox .tac-bottom{ display:flex; align-items:center; gap:10px; justify-content:space-between; width:100%; align-self:stretch; }
+  .version-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    height: 20px; padding: 0 8px; border-radius: 6px;
+    background: transparent; color: var(--brand);
+    border:1px solid #2b3446; box-shadow:none;
+    font-weight:600; font-size: 11px; letter-spacing:.2px;
+    white-space: nowrap; user-select: none;
   }
   #tacTT{ color:#ffffff; font-weight:700; letter-spacing:.3px; font-size:14px; }
-  #tacHHMM{ color:var(--brand); font-weight:800; letter-spacing:.6px; font-size:18px; } /* größer */
+  #tacHHMM{ color:var(--brand); font-weight:800; letter-spacing:.6px; font-size:18px; }
   #tacMMMJJ{ color:#ffffff; font-weight:700; letter-spacing:.3px; font-size:12px; }
-  #tacLocalTime{ color:#9aa6b2; font-size:12px; }  /* grau */
-  #tacLocalTime b{ font-weight:700; }              /* hh:mm fett */
-  #tacLocalTime .sec{ opacity:.9; }
+  #tacLocalTime{ color:#9aa6b2; font-size:12px; }  #tacLocalTime b{ font-weight:700; }  #tacLocalTime .sec{ opacity:.9; }
 
   .card{margin-bottom:18px}
   .card h2{font-size:16px;margin-bottom:8px;color:var(--brand)}
@@ -122,21 +123,59 @@
     min-height: var(--ctl-h);
     transition: background-color .15s ease, transform .12s ease, filter .15s ease, box-shadow .15s ease, outline-color .1s ease;
   }
-  input:disabled { cursor:not-allowed; }
-  .card button:hover, .copybtn:hover {
-    filter: brightness(1.08);
+  /* Angenehme Hover-/Active-Effekte für Buttons */
+  .card button:hover:not(:disabled){
+    background:#223045;
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0,0,0,.25);
-    color: #8fb4ff;
+    box-shadow: 0 6px 14px rgba(0,0,0,.25);
+    filter: brightness(1.03);
   }
-  /* Sichtbare Aktiv-Markierung für Mess-Modi (blauer Rahmen) */
+  .card button:active:not(:disabled){
+    transform: translateY(0);
+    box-shadow: 0 3px 8px rgba(0,0,0,.22);
+    filter: brightness(0.98);
+  }
+  .card button:focus-visible{
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  /* Hover-/Active für Kopier-Buttons */
+  .copybtn:hover:not(:disabled){
+    background:#24324a;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0,0,0,.25);
+    filter: brightness(1.03);
+  }
+  .copybtn:active:not(:disabled){
+    transform: translateY(0);
+    box-shadow: 0 3px 8px rgba(0,0,0,.22);
+    filter: brightness(0.98);
+  }
+  .copybtn:focus-visible{
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  .inline-pickers{ display:flex; align-items:center; gap:12px; }
+  .inline-pickers input[type="color"]{
+    width: 36px; min-width:36px; height: 28px; padding:0; border:none; background:transparent;
+    min-height: 0;
+  }
+  input:disabled { cursor:not-allowed; }
+
+  /* Ausgrauen von Labels, wenn Checkbox disabled */
+  .checkbox-row input[type="checkbox"]:disabled + label{
+    opacity: .5;
+    cursor: not-allowed;
+  }
+
   .modeActive{ outline:2px solid #6ea8fe; }
 
   .grid{display:grid;gap:10px;grid-template-columns:repeat(4,1fr)}
   .grid-2{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
   .grid-3{display:grid;gap:10px;grid-template-columns:repeat(3,1fr)}
   .grid-4{display:grid;gap:10px;grid-template-columns:repeat(4,1fr)}
-  .grid-5{display:grid;gap:10px;grid-template-columns: 50px 50px 70px 1fr 1fr; /* Zone, Band, Hem fix, Rest flexibel */}
+  .grid-5{display:grid;gap:10px;grid-template-columns: 50px 50px 70px 1fr 1fr;}
   .row{display:grid;grid-template-columns:1fr;gap:8px}
   .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .btnrow-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -163,8 +202,281 @@
   }
   .copybtn.copied{ outline:2px solid var(--brand); }
   .copybtn svg{ width:16px; height:16px; stroke: var(--brand); fill:none; stroke-width:2; }
+  #customMarkerHint{ margin-top:10px; }
+  .custom-marker-popup{ display:flex; flex-direction:column; gap:8px; width:220px; }
+  .custom-marker-popup select,
+  .custom-marker-popup textarea,
+  .custom-marker-popup input[type="text"]{
+    width:100%;
+    background:#111827; color:#e6efff; border:1px solid #3a4354; border-radius:6px;
+    padding:6px; font:13px/1.35 Arial,sans-serif;
+  }
+  .custom-marker-popup .cm-color-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .custom-marker-popup input[type="color"]{
+    width:48px;
+    height:32px;
+    padding:0;
+    border:none;
+    background:transparent;
+    cursor:pointer;
+  }
+  .custom-marker-popup .cm-color-reset{
+    padding:6px 10px;
+    min-height: var(--ctl-h);
+    background:#1b2330;
+    color:#00ff33;
+    border:1px solid #3a4354;
+    border-radius:6px;
+    cursor:pointer;
+    font:12px/1 Arial,sans-serif;
+    transition: background-color .15s ease, transform .12s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  .custom-marker-popup .cm-color-reset:hover:not(:disabled){
+    background:#24324a;
+    transform: translateY(-1px);
+    box-shadow:0 6px 14px rgba(0,0,0,.25);
+    filter:brightness(1.03);
+  }
+  .custom-marker-popup .cm-color-reset:active:not(:disabled){
+    transform: translateY(0);
+    box-shadow:0 3px 8px rgba(0,0,0,.22);
+    filter:brightness(0.98);
+  }
+  .custom-marker-popup .cm-color-reset:disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+  }
+  .kw-modal-overlay{
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(10,14,24,0.78);
+    z-index:6000;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .18s ease;
+  }
+  .kw-modal-overlay.open{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .kw-modal-overlay[hidden]{
+    display:none;
+  }
+  .kw-modal-dialog{
+    width:min(360px, calc(100% - 40px));
+    background:#111827;
+    border:1px solid #2b3446;
+    border-radius:12px;
+    box-shadow:0 24px 55px rgba(0,0,0,0.55);
+    padding:20px 22px;
+    color:#e6efff;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .kw-modal-head h2{
+    margin:0;
+    font-size:18px;
+    color:#8fb4ff;
+    font-weight:700;
+  }
+  .kw-modal-body{
+    font-size:14px;
+    line-height:1.55;
+    color:#c9d3e0;
+  }
+  .kw-modal-actions{
+    margin-left:auto;
+    display:flex;
+    gap:12px;
+  }
+  .kw-modal-btn{
+    padding:8px 16px;
+    border-radius:6px;
+    background:#1b2330;
+    color:#f1f5ff;
+    border:1px solid #3a4354;
+    cursor:pointer;
+    font:600 13px/1 Arial,sans-serif;
+    transition: background-color .15s ease, transform .12s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  .kw-modal-btn:hover{
+    background:#24324a;
+    transform: translateY(-1px);
+    box-shadow:0 8px 18px rgba(0,0,0,0.3);
+    filter:brightness(1.03);
+  }
+  .kw-modal-btn:active{
+    transform: translateY(0);
+    box-shadow:0 4px 10px rgba(0,0,0,0.25);
+    filter:brightness(0.97);
+  }
+  .kw-modal-btn.danger{
+    background:#2a1620;
+    border-color:#5b2a3d;
+    color:#ffbebe;
+  }
+  .kw-modal-btn.danger:hover{
+    background:#3a1f2d;
+  }
+  .custom-marker-popup textarea{
+    min-height:90px; resize:vertical;
+  }
+  .custom-marker-popup select,
+  .custom-marker-popup input[type="text"]{
+    min-height: var(--ctl-h);
+    resize:none;
+  }
+  .custom-marker-popup textarea:focus-visible{
+    outline:2px solid var(--brand);
+    outline-offset:2px;
+  }
+  .custom-marker-popup label,
+  .custom-marker-popup .hint{
+    color:var(--brand);
+  }
+  .custom-marker-popup .btn-row{ display:flex; gap:8px; }
+  .custom-marker-popup button{
+    flex:1; padding:8px; min-height: var(--ctl-h);
+    background:#1b2330; color:#f1f5ff; border:1px solid #3a4354; border-radius:6px; cursor:pointer;
+    transition: background-color .15s ease, transform .12s ease, box-shadow .15s ease, filter .15s ease;
+  }
+  .custom-marker-popup button:hover{
+    background:#24324a;
+    transform: translateY(-1px);
+    box-shadow:0 6px 14px rgba(0,0,0,.25);
+    filter:brightness(1.03);
+  }
+  .custom-marker-popup button:active{
+    transform: translateY(0);
+    box-shadow:0 3px 8px rgba(0,0,0,.22);
+    filter:brightness(0.98);
+  }
+  .custom-marker-popup button.danger{
+    background:#2a1620; color:#ffbebe; border-color:#5b2a3d;
+  }
+  .custom-marker-popup button.danger:hover{
+    background:#3a1f2d;
+  }
+  .custom-marker-tooltip{
+    background:rgba(15,22,34,.92); color:#f5f8ff;
+    border:1px solid #2b3446; border-radius:6px; padding:6px 8px;
+    font:12px/1.4 Arial,sans-serif;
+    box-shadow:0 2px 6px rgba(0,0,0,.35);
+    width:200px;
+    max-width:200px;
+    white-space:normal;
+    word-break:break-word;
+    display:inline-block;
+  }
+  .custom-marker-icon{
+    border:none; background:none; transition:transform .12s ease;
+  }
+  .custom-marker-icon.svg-marker-icon .svg-marker-wrapper{
+    width:64px;
+    margin:-8px auto 0 auto;
+  }
+  .custom-marker-icon.svg-marker-icon svg{
+    display:block;
+    width:64px;
+    height:64px;
+  }
+  .custom-marker-icon .cm-marker{
+    position:relative; width:30px; height:48px; margin:-8px auto 0 auto;
+  }
+  .custom-marker-icon .cm-marker.cm-circle{ width:30px; }
+  .custom-marker-icon .cm-marker.cm-rect{ width:34px; }
+  .custom-marker-icon .cm-marker.cm-tri{ width:36px; }
+  .custom-marker-icon .cm-circle-head{
+    width:30px; height:30px; border-radius:50%;
+    background:var(--cm-color, #ffff00);
+    border:1px solid rgba(0,0,0,0.7);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.25);
+    padding:0 3px;
+  }
+  .custom-marker-icon .cm-marker-letter{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    font:700 10px/1 'Arial',sans-serif;
+    letter-spacing:0.3px;
+    color:#151515;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+  .custom-marker-icon .cm-tail{
+    position:absolute; left:50%; transform:translateX(-50%);
+    width:0; height:0;
+    border-left:7px solid transparent;
+    border-right:7px solid transparent;
+    border-top:9px solid rgba(0,0,0,0.7);
+  }
+  .custom-marker-icon .cm-tail::after{
+    content:"";
+    position:absolute; left:-6px; top:-8px;
+    width:0; height:0;
+    border-left:6px solid transparent;
+    border-right:6px solid transparent;
+    border-top:8px solid var(--cm-color, #ffff00);
+  }
+  .custom-marker-icon .cm-marker.cm-circle .cm-tail{ top:30px; }
+  .custom-marker-icon .cm-marker.cm-rect .cm-tail{ top:26px; }
+  .custom-marker-icon .cm-marker.cm-tri .cm-tail{ top:36px; }
+  .custom-marker-icon .cm-rect-head{
+    width:34px; height:26px;
+    background:var(--cm-color, #ffff00);
+    border:1px solid rgba(0,0,0,0.7);
+    border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 1px 3px rgba(255,255,255,0.25);
+    padding:0 4px;
+  }
+  .custom-marker-icon .cm-tri-head{
+    position:absolute; left:50%; top:0; transform:translateX(-50%);
+    width:32px; height:36px;
+    background:var(--cm-color, #ff4c4c);
+    clip-path:polygon(50% 0%, 100% 100%, 0% 100%);
+    border:1px solid rgba(0,0,0,0.7);
+    border-bottom:none;
+    display:flex; align-items:flex-end; justify-content:center;
+    padding-bottom:6px;
+  }
+  .custom-marker-icon .cm-tri-head .cm-marker-letter{
+    font:700 9px/1 'Arial',sans-serif;
+    color:#151515;
+    text-align:center;
+    width:26px;
+  }
+  .custom-marker-icon .cm-shadow{ display:none; }
+  .custom-marker-icon:hover{ transform:translateY(-1px); }
+  .custom-marker-icon .cm-label{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    margin:4px auto 0 auto;
+    padding:2px 8px;
+    border-radius:6px;
+    background:rgba(14,20,32,0.9);
+    border:1px solid rgba(43,52,70,0.85);
+    color:#f8f9ff;
+    font:12px/1.2 Arial,sans-serif;
+    text-align:center;
+    white-space:nowrap;
+  }
+  .custom-marker-popup .cm-type-chip{
+    display:inline-block; width:12px; height:12px; border-radius:50%;
+    border:1px solid rgba(0,0,0,0.6); margin-left:6px; vertical-align:middle;
+  }
 
-  /* Checkboxen kompakt + mobil-sicher */
   .checkbox-row{display:flex;align-items:center;gap:14px;margin-top:8px;flex-wrap:wrap;}
   .checkbox-row > div{display:flex;align-items:center;gap:8px;}
   .checkbox-row input[type="checkbox"]{
@@ -178,64 +490,89 @@
     transform:rotate(45deg) scale(0);transition:transform .12s ease;
   }
   .checkbox-row input[type="checkbox"]:checked{background:var(--brand);border-color:var(--brand);}
-  .checkbox-row input[type="checkbox"]:checked::after{transform:rotate(45deg) scale(1);}
+  .checkbox-row input[type="checkbox"]::after{transform:rotate(45deg) scale(1);}
+  /* Disabled checkbox itself visibly paler */
+  .checkbox-row input[type="checkbox"]:disabled{
+    background:#141b2a;
+    border-color:#2b3446;
+    opacity:.6;
+  }
   .checkbox-row label{cursor:pointer;padding:6px 2px;}
+  .ov-dot{ display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  /* Overlay-Label: dezenter farbiger Unterstrich pro Name */
+  .checkbox-row label .ov-name{ display:inline-block; border-bottom:2px solid transparent; padding-bottom:0px; }
+  label[for="olTHW"] .ov-name{ border-bottom-color:#0d47a1; }
+  label[for="olFW"]  .ov-name{ border-bottom-color:#c62828; }
+  label[for="olHOS"] .ov-name{ border-bottom-color:#ffffff; }
+  label[for="olPOL"] .ov-name{ border-bottom-color:#1e88e5; }
+  label[for="olSP"]  .ov-name{ border-bottom-color:#2e7d32; }
+  
+  label[for="olHYD"] .ov-name{ border-bottom-color:#ef5350; }
+  .ov-status{ display:inline-block; margin-left:4px; width:8px; height:8px; border-radius:50%; vertical-align:middle; border:1px solid #3a4354; background:#6b778c; }
+  .ov-status.loading{ background:#9ec1ff; box-shadow:0 0 0 2px rgba(158,193,255,.18); }
+  .ov-status.ok{ background:#4caf50; border-color:#3a7a3f; }
+  .ov-status.error{ background:#ef5350; border-color:#b53c3a; }
+  .ov-status.paused{ background:#f6c104; border-color:#8a6d02; }
+  .ov-legend{ margin-top:6px; color:#9aa6b2; font-size:11px; }
+  
 
-  /* Grid-Optionen zeigen/verbergen */
+  /* kompaktere Abstände im Overlay-Bereich */
+  #overlayRow{ row-gap:6px; column-gap:12px; margin-top:6px; }
+  #hydTypeRow{ margin-top:8px !important; padding-top:8px; padding-bottom:4px; }
+
   #gridOptions{ transition: opacity .15s ease }
   #gridOptions.hidden{ opacity:.0; height:0; overflow:hidden; pointer-events:none }
 
-  /* Karte + Live-HUD */
-  .map-wrap{
-    flex-grow:1;
-    position:relative !important;
-    overflow:visible;
+  .map-wrap{ flex-grow:1; position:relative !important; overflow:visible; }
+  #map{ height:100%; position:relative; z-index:1; }
+  .loading-overlay{
+    position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+    z-index: 5000; pointer-events:none;
+    background: rgba(15,22,34,0.0);
+    font: 600 14px/1.2 Arial, sans-serif; color:#e6efff;
   }
-  #map{
-    height:100%;
-    position:relative;
-    z-index:1;
+  .loading-overlay .box{
+    background: rgba(15,22,34,0.92); border:1px solid #2b3446; border-radius:10px;
+    padding: 10px 14px; box-shadow: 0 6px 16px rgba(0,0,0,.35);
   }
-  /* HUD robust über der Karte fixieren */
+
+  /* Generic HUD styling for both main HUD and overlay count HUD */
+  .coord-hud{
+    position:absolute; left:10px; bottom:10px; z-index: 10000;
+    background:rgba(15,22,34,.85); color:#e6efff; border:1px solid #2b3446; border-radius:8px; padding:8px 10px;
+    font:12px/1.35 Arial,sans-serif; white-space:nowrap; pointer-events:none;
+  }
+  .coord-hud .row{ display:flex; align-items:center; gap:6px; }
+  .coord-hud b{ color: var(--hud-blue); }
   #coordHud.coord-hud{
-    position:absolute !important;
-    left:10px !important;
-    bottom:10px !important;
-    z-index: 10000 !important;
-    background:rgba(15,22,34,.85);
-    color:#e6efff;
-    border:1px solid #2b3446;
-    border-radius:8px;
-    padding:8px 10px;
-    font:12px/1.35 Arial,sans-serif;
-    white-space:nowrap;
-    pointer-events:none;
+    position:absolute !important; left:10px !important; bottom:10px !important; z-index: 10000 !important;
+    background:rgba(15,22,34,.85); color:#e6efff; border:1px solid #2b3446; border-radius:8px; padding:8px 10px;
+    font:12px/1.35 Arial,sans-serif; white-space:nowrap; pointer-events:none;
   }
   #coordHud .row{display:flex !important; align-items:center; gap:6px;}
   #coordHud b{ color:var(--hud-blue); min-width:60px; text-align:left; }
 
-  /* Zoom-Badge im HUD-Style */
   .leaflet-control-zoominfo{
-    background:rgba(15,22,34,.85);
-    color:#e6efff;
-    border:1px solid #2b3446;
-    padding:6px 10px;
-    border-radius:8px;
-    font:12px/1.2 Arial,sans-serif;
-    margin-top:4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    background:rgba(15,22,34,.85); color:#e6efff; border:1px solid #2b3446; padding:6px 10px; border-radius:8px; font:12px/1.2 Arial,sans-serif;
+    margin-top:4px; box-shadow: 0 2px 6px rgba(0,0,0,.25);
   }
   .leaflet-control-zoominfo .lbl{ color:var(--hud-blue); font-weight:700; margin-right:6px; }
   .leaflet-control-zoominfo .val{ font-weight:500; }
 
-  /* Zoom-Limit Overlay */
+  /* Dim overlays section in the Leaflet control when gated by zoom */
+  .leaflet-control-layers.kw-overlays-disabled .leaflet-control-layers-overlays label {
+    opacity: .5;
+    pointer-events: none;
+  }
+  /* Disable a specific overlay item (e.g., Hydranten) */
+  .leaflet-control-layers .kw-item-disabled { opacity: .5; pointer-events: none; }
+
   .zoom-notice{
     position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:1500;
     background:rgba(15,22,34,.95); color:#e6efff; border:1px solid #2b3446; border-radius:8px; padding:6px 10px; font:12px/1 Arial,sans-serif;
     display:none; pointer-events:none;
   }
 
-  /* Mess-Info mit mehr Abstand unterhalb der Buttons */
   #measureInfo{ margin-top:10px; }
 
   @media (max-width: 520px){
@@ -247,185 +584,120 @@
     #sec-utm .grid-4, #sec-mgrs .grid-4{ grid-template-columns: repeat(2, 1fr); }
     #sec-utm .row-2{ grid-template-columns: 1fr; align-items:stretch; }
   }
-  
-  /* Responsive UTM-Eingabe */
   @media (max-width: 480px){
-  #sec-utm .grid-5{
-    grid-template-columns: repeat(3, 1fr); /* erst 3 Felder */
-  }
-  #utmOstwert, #utmNordwert{
-    grid-column: span 3; /* nehmen volle Breite in der nächsten Zeile */
-  }
+    #sec-utm .grid-5{ grid-template-columns: repeat(3, 1fr); }
+    #utmOstwert, #utmNordwert{ grid-column: span 3; }
   }
 
-  /* ===== Responsive Optimierungen (drop-in) ===== */
+  .wch{ max-width:100%; }
 
-/* 1) Eingabefelder: .wch soll niemals aus dem Grid laufen */
-.wch{ max-width:100%; }
+  .btnrow,
+  .btnrow-2,
+  .btnrow-3{ display:grid; grid-auto-rows: minmax(var(--ctl-h), auto); grid-gap: 8px; }
+  .btnrow{ grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 920px){ .btnrow{ grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 720px){ .btnrow{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 460px){ .btnrow{ grid-template-columns: 1fr; } }
 
-/* 2) Buttons automatisch umbrechen – sinnvoll auf schmalen Viewports */
-.btnrow,
-.btnrow-2,
-.btnrow-3{
-  display:grid;
-  grid-auto-rows: minmax(var(--ctl-h), auto);
-  grid-gap: 8px;
-}
-.btnrow{
-  grid-template-columns: repeat(4, 1fr);
-}
-@media (max-width: 920px){
-  .btnrow{ grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 720px){
-  .btnrow{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 460px){
-  .btnrow{ grid-template-columns: 1fr; }
-}
+  @media (max-width: 980px){ :root{ --panel-w: 520px; } }
+  @media (max-width: 760px){ :root{ --panel-w: 420px; } }
 
-/* 3) Karten-Panel: auf Tablet/Slim breiter, auf Phone volle Breite (bestehende Regel ergänzt) */
-@media (max-width: 980px){
-  :root{ --panel-w: 520px; }
-}
-@media (max-width: 760px){
-  :root{ --panel-w: 420px; }
-}
+  @media (max-width: 520px){ .map-wrap{ height: 60vh; } }
 
-/* 4) Map-Höhe auf sehr kleinen Displays etwas größer für bessere Nutzbarkeit */
-@media (max-width: 520px){
-  .map-wrap{ height: 60vh; } /* vorher 55vh */
-}
+  header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
+  .card h2{ font-size: clamp(15px, 1.9vw, 16px); }
 
-/* 5) Typografie clampen: Überschriften & HUD leicht skalieren */
-header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
-.card h2{ font-size: clamp(15px, 1.9vw, 16px); }
+  #tacTimeBox{ gap: 6px; font-size: clamp(14px, 1.9vw, 16px); }
+  #tacTT{ font-size: 0.95em; } #tacHHMM{ font-size: 1.20em; } #tacMMMJJ{ font-size: 0.95em; }
 
-/* 6) Taktische Zeit – feinere Kontrolle je Breakpoint
-      (deine Basis-Styles bleiben bestehen, das hier passt nur Größen an) */
-#tacTimeBox{
-  gap: 6px;
-  font-size: clamp(14px, 1.9vw, 16px);
-}
-#tacTT    { font-size: 0.95em; }
-#tacHHMM  { font-size: 1.20em; }     /* HHMM etwas größer als Rest */
-#tacMMMJJ { font-size: 0.95em; }
+  @media (max-width: 880px){ #sec-utm .grid-4{ grid-template-columns: 0.7fr 0.9fr 1.2fr 1.4fr; } }
+  @media (max-width: 720px){ #sec-utm .grid-4{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px){ #sec-utm .grid-4{ grid-template-columns: 1fr; } }
 
-/* 7) UTM, MGRS, DMS Grids: früher umbrechen, Feldbreiten priorisieren */
-@media (max-width: 880px){
-  /* UTM: Zone/Band/Hem kompakter, Ost/Nord kriegen mehr Platz */
-  #sec-utm .grid-4{
-    grid-template-columns: 0.7fr 0.9fr 1.2fr 1.4fr; /* Zone, Hem, Ost, Nord */
-  }
-}
-@media (max-width: 720px){
-  #sec-utm .grid-4{
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 420px){
-  #sec-utm .grid-4{
-    grid-template-columns: 1fr;
-  }
-}
+  @media (max-width: 880px){ #sec-mgrs .grid-4{ grid-template-columns: 0.9fr 0.9fr 1.1fr 1.1fr; } }
+  @media (max-width: 720px){ #sec-mgrs .grid-4{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px){ #sec-mgrs .grid-4{ grid-template-columns: 1fr; } }
 
-/* MGRS: bei mittleren Breiten 2 Spalten, auf schmal sehr kompakt */
-@media (max-width: 880px){
-  #sec-mgrs .grid-4{ grid-template-columns: 0.9fr 0.9fr 1.1fr 1.1fr; }
-}
-@media (max-width: 720px){
-  #sec-mgrs .grid-4{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 420px){
-  #sec-mgrs .grid-4{ grid-template-columns: 1fr; }
-}
+  @media (max-width: 880px){ #sec-dms .grid-4{ grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px){ #sec-dms .grid-4{ grid-template-columns: 1fr; } }
 
-/* DMS: schneller auf 2 Spalten und dann 1 Spalte fallen */
-@media (max-width: 880px){
-  #sec-dms .grid-4{ grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 480px){
-  #sec-dms .grid-4{ grid-template-columns: 1fr; }
-}
-
-/* 8) Labels & Hinweise auf kleinen Screens etwas kleiner, um Zeilenumbrüche zu reduzieren */
-@media (max-width: 480px){
-  label{ font-size: 11px; }
-  .hint{ font-size: 11px; }
-}
-
-/* 9) Live-HUD – Schrift minimal mit dem Viewport skalieren */
-#coordHud.coord-hud{
-  font-size: clamp(11px, 1.6vw, 12px);
-}
-#coordHud b{ min-width: 58px; }
-
-/* 10) Select- und Input-Padding auf Phones leicht reduzieren,
-       damit mehr Inhalt sichtbar bleibt */
-@media (max-width: 420px){
-  .card input, .card select, .card button{
-    padding: 7px;
-    min-height: calc(var(--ctl-h) - 4px);
-  }
-}
-
-/* 11) Checkbox-Row: engere Abstände auf kleinen Geräten */
-@media (max-width: 540px){
-  .checkbox-row{ gap: 10px; }
-  .checkbox-row label{ padding: 4px 2px; }
-}
-
-/* ===== Small-display responsive fix ===== */
-/* Tablet + Phone: Panel oben, Karte darunter; Karte stets sichtbar. */
-@media (max-width: 920px){
-  :root{ --panel-w: 100vw; }
-  body{ flex-direction: column; }
-  .panel{ width: 100%; }
-
-  /* Karte sichtbar halten */
-  .map-wrap{ height: 62vh; min-height: 280px; }
-  #map{ min-height: 280px; }
-
-  /* In Spaltenansicht Panel vertikal zuklappen (statt seitlich) */
-  body.panel-collapsed .panel{
-    transform: none;
-    margin-right: 0;
-    max-height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    overflow: hidden;
-    border-top-width: 0;
-    border-bottom-width: 0;
+  @media (max-width: 480px){
+    label{ font-size: 11px; }
+    .hint{ font-size: 11px; }
   }
 
-  /* Toggle-Button oben rechts fixieren */
-  #panelToggle{
-    top: 10px;
-    left: auto;
-    right: 10px;
-    transform: none;
-    height: 36px;
-    width: 44px;
-    border-radius: 10px;
-  }
-  body.panel-collapsed #panelToggle{ right: 10px; left: auto; }
-  body.panel-collapsed #panelToggle svg{ transform: rotate(180deg); }
-}
+  #coordHud.coord-hud{ font-size: clamp(11px, 1.6vw, 12px); }
+  #coordHud b{ min-width: 58px; }
 
-/* Feinjustage für sehr kleine Breiten */
-@media (max-width: 600px){
-  .map-wrap{ height: 64vh; min-height: 260px; }
-  #map{ min-height: 260px; }
-}
-/* Überschreibt die obige 920px-Regel für Phones (bewusst nachgelagert) */
-@media (max-width: 520px){
-  .map-wrap{ height: 60vh; min-height: 240px; }
-  #map{ min-height: 240px; }
-}
-@media (max-width: 420px){
-  .map-wrap{ height: 62vh; min-height: 220px; }
-  #map{ min-height: 220px; }
-}
+  @media (max-width: 420px){
+    .card input, .card select, .card button{ padding: 7px; min-height: calc(var(--ctl-h) - 4px); }
+  }
+
+  @media (max-width: 540px){
+    .checkbox-row{ gap: 10px; }
+    .checkbox-row label{ padding: 4px 2px; }
+  }
+
+  /* Overlays & Badges */
+  .badge{ width:24px;height:24px;border-radius:5px;color:#fff;display:flex; align-items:center;justify-content:center;font:bold 12px/24px system-ui; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+  .badge-fw  { background:#c62828; }
+  .badge-thw { background: #0d47a1; width: 42px; height: 24px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font: bold 12px/24px system-ui; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);} 
+  .badge-hos { background:#fff;color:#c62828;border:2px solid #c62828; box-shadow:0 1px 4px rgba(0,0,0,.15); }
+  .badge-pol { background:#1e88e5; }
+  .badge-hyd { background:#ef5350; }
+  .badge-sport { background:#2e7d32; }
+  .road-badge { pointer-events:none; }
+
+  /* Kompaktere Eingabehöhe in Koordinaten-Sektionen */
+  #sec-utm input, #sec-utm select, #sec-utm button,
+  #sec-mgrs input, #sec-mgrs select, #sec-mgrs button,
+  #sec-dec input, #sec-dec select, #sec-dec button,
+  #sec-dms input, #sec-dms select, #sec-dms button{
+    min-height: 32px;
+    padding: 6px;
+  }
+
+  /* String-/Lesefelder (UTM/MGRS) und Copy-Buttons kleiner */
+  #sec-utm .copyrow input[readonly],
+  #sec-mgrs .copyrow input[readonly]{
+    height: 32px;
+  }
+  #sec-utm .copybtn,
+  #sec-mgrs .copybtn{
+    height: 32px; width: 32px; min-width: 32px;
+  }
+
+
+
+  .data-licensing-notice{
+    margin:12px 0 0;
+    padding:12px 16px;
+    background:rgba(14,20,32,0.85);
+    color:#d9e2ef;
+    font-size:13px;
+    line-height:1.45;
+    border-top:1px solid #2b3446;
+  }
+  .data-licensing-notice h2{
+    font-size:14px;
+    margin-bottom:6px;
+    color:var(--brand);
+    text-transform:uppercase;
+    letter-spacing:.6px;
+  }
+  .data-licensing-notice p{
+    margin-bottom:6px;
+  }
+  .data-licensing-notice ul{
+    margin-left:18px;
+    margin-bottom:6px;
+  }
+  .data-licensing-notice li{
+    margin-bottom:4px;
+  }
+  .data-licensing-notice a{
+    color:var(--brand);
+  }
 </style>
 </head>
 <body>
@@ -471,8 +743,11 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
           <span id="tacHHMM">----</span>
           <span id="tacMMMJJ">---</span>
         </div>
-        <div id="tacLocalTime">
-          <b id="ltHHMM">--:--</b><span class="sec" id="ltSS">:--</span>
+        <div class="tac-bottom">
+          <span id="versionBadge" class="version-badge" aria-label="Version" title="Version">v1.0.0</span>
+          <div id="tacLocalTime">
+            <b id="ltHHMM">--:--</b><span class="sec" id="ltSS">:--</span>
+          </div>
         </div>
       </div>
     </header>
@@ -517,45 +792,51 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       </div>
 
       <div id="gridOptions">
-        <div class="grid-2" style="margin-top:8px">
-          <div>
-            <label for="gridColor">Rasterfarbe</label>
-            <input id="gridColor" type="color" value="#ff0000" />
-          </div>
-          <div>
-            <label for="gridLabelColor">Beschriftungsfarbe</label>
-            <input id="gridLabelColor" type="color" value="#0000a0" />
-          </div>
+        <div class="inline-pickers" style="margin-top:8px">
+          <label for="gridColor">Rasterfarbe</label>
+          <input id="gridColor" type="color" value="#ff0000" />
+          <label for="gridLabelColor">Beschriftungsfarbe</label>
+          <input id="gridLabelColor" type="color" value="#0000a0" />
         </div>
 
         <div class="checkbox-row">
           <div>
             <input id="gridLabelsChk" type="checkbox" checked />
-            <label for="gridLabelsChk">Linien beschriften</label>
+            <label for="gridLabelsChk">Raster beschriften</label>
           </div>
           <div>
-            <input id="gridAutoContrast" type="checkbox" />
+            <input id="gridAutoContrast" type="checkbox" checked />
             <label for="gridAutoContrast">Kontrast automatisch</label>
           </div>
-        </div>
-      </div>
-
-      <!-- HUD-Checkbox -->
-      <div class="checkbox-row" id="hudRow" style="margin-top:8px">
-        <div>
+          <div>
           <input id="hudToggle" type="checkbox" checked />
-          <label for="hudToggle">Live-Koordinanten anzeigen</label>
+          <label for="hudToggle">Live-Koordinaten</label>
+        </div>
         </div>
       </div>
+      
+      <!-- Overlays -->
+      <hr class="divider">
+      <h3 style="margin-top:10px; display:inline">Zusatzanzeige</h3> <span class="hint" style="color:#c9d3e0; font-size:11px">(THW ab Zoom 11, sonst ab Zoom 12)</span>
+      <div><span class="hint" style="color:#c9d3e0; font-size:11px">Daten werden dann nachgeladen; jedoch teilweise nicht alle verfügbar.</span></div>
+      <div class="checkbox-row" id="overlayRow">
+        <div><input id="olTHW" type="checkbox"><label for="olTHW"><span class="ov-name">THW</span> <span class="ov-status" id="stTHW"></span></label></div>
+        <div><input id="olFW" type="checkbox"><label for="olFW"><span class="ov-name">Feuerwehren</span> <span class="ov-status" id="stFW"></span></label></div>
+        <div><input id="olHOS" type="checkbox"><label for="olHOS"><span class="ov-name">Krankenhäuser</span> <span class="ov-status" id="stHOS"></span></label></div>
+        <div><input id="olPOL" type="checkbox"><label for="olPOL"><span class="ov-name">Polizei</span> <span class="ov-status" id="stPOL"></span></label></div>
+        <div><input id="olSP" type="checkbox"><label for="olSP"><span class="ov-name">Sportstätten</span> <span class="ov-status" id="stSP"></span></label></div>
+        <div><input id="olHYD" type="checkbox"><label for="olHYD"><span class="ov-name">Hydranten</span> <span class="ov-status" id="stHYD"></span></label></div>
+      </div>
+      <div class="ov-legend">Statusanzeige: <span class="ov-status loading" title="lädt"></span> Lädt Daten • <span class="ov-status ok" title="ok"></span> Geladen • <span class="ov-status paused" title="Pause"></span> Warten • <span class="ov-status error" title="Fehler"></span> Fehler • <span class="ov-status"></span> Inaktiv</div>
+      
+      <!-- Hydranten-Zählung entfernt -->
     </div>
 
-    <!-- UTM -->
-<!-- UTM -->
+      <!-- UTM -->
     <hr class="divider">
     <div class="card" id="sec-utm">
     <h2>UTM Koordinaten</h2>
 
-    <!-- eine Zeile mit 5 Spalten -->
     <div class="grid-5">
       <div>
         <label for="utmZone">Zone</label>
@@ -586,7 +867,6 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       </div>
     </div>
 
-    <!-- UTM-String + Kopierbutton -->
     <div class="row-2" style="margin-top:8px">
       <div style="grid-column: 1 / -1">
         <label for="utmString">UTM Koordinate</label>
@@ -604,8 +884,6 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
 
     <div id="utmWarn" class="warn" style="display:none"></div>
     </div>
-
-
 
     <!-- MGRS -->
     <hr class="divider">
@@ -705,6 +983,17 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         <button id="measureUndo" type="button">Entfernen</button>
         <button id="measureClear" type="button">Löschen</button>
       </div>
+      <hr class="divider">
+      <div class="card" id="sec-measure">
+      <h2>Eigene Marker</h2>
+      <div class="btnrow-3">
+        <button id="customMarkerToggle" type="button">Marker setzen</button>
+        <button id="customMarkerVisibility" type="button">Marker ausblenden</button>
+        <button id="customMarkerClear" type="button">Alle löschen</button>
+      </div></div>
+      <div id="customMarkerHint" class="hint">
+        Modus <b>Marker setzen</b>: Klick in die Karte legt einen neuen Marker an. Marker lassen sich per Drag &amp; Drop verschieben. Popup öffnen, um Text zu speichern oder den Marker zu löschen.
+      </div>
       <div id="measureInfo" class="hint"></div>
 
       <div class="legal-wrap">
@@ -731,20 +1020,47 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
   <!-- Karte + HUD -->
   <div class="map-wrap">
     <div id="map" role="region" aria-label="Karte"></div>
+    <section class="data-licensing-notice" aria-label="Lizenzhinweise zu Karten- und Fachdaten">
+      <h2>Lizenzhinweise</h2>
+      <p>Die Kartendaten stammen aus dem OpenStreetMap-Projekt und werden live über die <a href="https://overpass-api.de/" target="_blank" rel="noopener">Overpass API</a> geladen.</p>
+      <ul>
+        <li>OpenStreetMap-Daten stehen unter der <a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL&nbsp;1.0</a>; abgeleitete Datenbanken müssen mit dem gleichen Share-Alike-Lizenzmodell bereitgestellt werden.</li>
+        <li>Produced Works (z.&nbsp;B. Exporte oder Berichte) benötigen weiterhin eine sichtbare Attribution und auf Anfrage Zugang zur zugrunde liegenden Datenbank.</li>
+        <li>Bitte halte die Nutzungsbedingungen und Fair-Use-Regeln des verwendeten Overpass-Servers ein oder betreibe bei höherer Last einen eigenen Dienst.</li>
+        <li>Basiskarten: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OSM Standard Tile Layer</a> und <a href="https://www.esri.com/legal/licensing/terms.html" target="_blank" rel="noopener">Esri World Imagery</a> mit ihren jeweiligen Lizenzhinweisen.</li>
+      </ul>
+      <p>Der Anwendungscode steht unter MIT-Lizenz; Daten-Lizenzen bleiben davon unberührt.</p>
+    </section>
+    <div id="loadingOverlay" class="loading-overlay" aria-live="polite"><div class="box">Daten werden geladen …</div></div>
+    <div id="ovCountHud" class="coord-hud" style="right:10px; left:auto; bottom:10px; display:none"></div>
     <div id="zoomNotice" class="zoom-notice" role="status" aria-live="polite"></div>
     <div id="coordHud" class="coord-hud">
-      <div class="row"><b>Live-Koordinanten</b></div>
+      <div class="row"><b>Live-Koordinaten</b></div>
       <div class="row"><b>Lat/Lng:</b><span id="hudDD">—</span></div>
       <div class="row"><b>UTM:</b><span id="hudUTM">—</span></div>
       <div class="row"><b>MGRS:</b><span id="hudMGRS">—</span></div>
     </div>
   </div>
 
+  <div id="kwConfirmOverlay" class="kw-modal-overlay" hidden>
+    <div class="kw-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="kwConfirmTitle" aria-describedby="kwConfirmMessage">
+      <div class="kw-modal-head">
+        <h2 id="kwConfirmTitle">Bestätigung</h2>
+      </div>
+      <div id="kwConfirmMessage" class="kw-modal-body"></div>
+      <div class="kw-modal-actions">
+        <button id="kwConfirmCancel" type="button" class="kw-modal-btn">Abbrechen</button>
+        <button id="kwConfirmOk" type="button" class="kw-modal-btn danger">Löschen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MGRS Loader -->
   <script>
-    function loadScript(src) {
+    function loadScript(src, type){
       return new Promise((resolve, reject) => {
         const s = document.createElement('script');
+        if (type) s.type = type;
         s.src = src; s.async = true;
         s.onload = () => resolve(true);
         s.onerror = () => reject(new Error('Script-Load-Fehler: ' + src));
@@ -753,12 +1069,19 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
     }
     async function ensureMgrs() {
       if (window.mgrs) return true;
-      const candidates = [
-        'https://cdn.jsdelivr.net/npm/mgrs@1.0.0/mgrs.min.js',
-        'https://cdn.jsdelivr.net/npm/mgrs@1.0.0/dist/mgrs.min.js',
-        'https://cdn.jsdelivr.net/npm/mgrs@1.0.0/dist/mgrs.js'
+      try {
+        const mod = await import('https://cdn.jsdelivr.net/npm/mgrs@1.0.0/+esm');
+        // Support both ESM default export and namespace export
+        window.mgrs = (mod && (mod.default || mod));
+        return true;
+      } catch (e) {
+        console.warn('ESM-Import von mgrs fehlgeschlagen, versuche UMD:', e);
+      }
+      const fallbacks = [
+        'https://cdn.jsdelivr.net/npm/mgrs@0.0.3/mgrs.min.js',
+        'https://cdn.jsdelivr.net/npm/mgrs@0.0.3/mgrs.js'
       ];
-      for (const url of candidates) {
+      for (const url of fallbacks) {
         try { await loadScript(url); if (window.mgrs) return true; } catch(_) {}
       }
       return false;
@@ -767,11 +1090,70 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
   </script>
 
   <script>
+    
+    /* ===== kleine Helfer ===== */
+    const sleep = (ms)=>new Promise(r=>setTimeout(r, ms));
+
     /* ===== Leaflet & Utils ===== */
     let map, marker;
     let baseOSM, baseSat, layerControl;
     let gridLayer = null;
+    let prevZoom = null;
+    const CUSTOM_MARKER_STORAGE_KEY = 'kwCustomMarkers';
+    const customMarkers = new Map(); // id -> { data, marker }
+    let customMarkerLayer = null;
+    let customMarkerLayerVisible = true;
+    let customMarkerMode = false;
+    let storageAvailable = true;
 
+    /* Overlays */
+    let thwLayer, fwLayer, hosLayer, polLayer, spLayer;
+    let hydClustLayer;
+    
+    let overpassTimers = { roads:null, fw:null, thw:null, hos:null, pol:null, sport:null, hyd:null };
+    // Zuletzt geladene BBOX je Overlay (s,w,n,e)
+    let lastFWBox=null, lastTHWBox=null, lastHOSBox=null, lastPOLBox=null, lastSPBox=null, lastHYDBox=null;
+    // Zuletzt geladene Daten je Overlay (GeoJSON)
+    let lastFWData=null, lastTHWData=null, lastHOSData=null, lastPOLData=null, lastSPData=null;
+    // Sanfter Circuit-Breaker pro Overlay
+    const opBreaker = {
+      roads:{ fail:0, until:0 }, fw:{ fail:0, until:0 }, thw:{ fail:0, until:0 }, hos:{ fail:0, until:0 }, pol:{ fail:0, until:0 }, sport:{ fail:0, until:0 }, hyd:{ fail:0, until:0 }
+    };
+    const overlayCache = new Map(); // key -> {data, exp}
+    const CACHE_TTL_MS = 5*60*1000; // 5 Minuten
+    // Zentrales Lade-Overlay (gezählt pro paralleler Anfrage)
+    const loadingState = { count: 0 };
+    const isLoading = ()=> loadingState.count>0;
+    function showLoading(){ try{ loadingState.count++; const el=$('loadingOverlay'); if (el) el.style.display='flex'; }catch{} }
+    function hideLoading(){
+      try{
+        loadingState.count=Math.max(0, loadingState.count-1);
+        if (loadingState.count===0){
+          const el=$('loadingOverlay'); if (el) el.style.display='none';
+          // Wichtig: hier KEIN sofortiges Gating mehr, um fertige Anzeige nicht zu entfernen
+        }
+      }catch{}
+    }
+    const fmtHM = (d)=>{ const hh=String(d.getHours()).padStart(2,'0'); const mm=String(d.getMinutes()).padStart(2,'0'); return hh+':'+mm; };
+    function setStatusState(id, state, tip){
+      try{
+        const el = document.getElementById('st'+id);
+        if (!el) return;
+        el.classList.remove('ok','loading','error','paused');
+        if (state) el.classList.add(state);
+        el.title = tip || '';
+      }catch{}
+    }
+    
+    const cbIsBlocked = (k)=> Date.now() < (opBreaker[k]?.until||0);
+    const cbOnFail = (k)=>{ try{ const b=opBreaker[k]; b.fail=(b.fail||0)+1; if (b.fail>=2){ b.until=Date.now()+2*60*1000; } }catch{} };
+    const cbOnSuccess = (k)=>{ try{ const b=opBreaker[k]; b.fail=0; b.until=0; }catch{} };
+    const cacheGet = (key)=>{ const v=overlayCache.get(key); if (!v) return null; if (Date.now()>v.exp){ overlayCache.delete(key); return null; } return v.data; };
+    const cacheSet = (key, data, ttl=CACHE_TTL_MS)=>{ overlayCache.set(key, { data, exp: Date.now()+ttl }); };
+
+    const OVERLAY_MIN_Z = 12; // Straßen/POIs außer THW
+    const OVERLAY_MIN_Z_THW = 11; // THW-spezifische Mindest-Zoomstufe
+    
     const $ = id => document.getElementById(id);
     const normLngWrap = lng => ((Number(lng) + 540) % 360) - 180;
 
@@ -804,18 +1186,317 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
       iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]
     });
+    function escapeHtml(str){
+      return String(str ?? '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+    function sanitizeHexColor(input){
+      const raw = String(input ?? '').trim();
+      if (!raw) return '';
+      const match = raw.match(/^#?([0-9a-fA-F]{6})$/);
+      return match ? ('#' + match[1].toUpperCase()) : '';
+    }
+
+    function showKwConfirm(opts = {}){
+      const overlay = $('kwConfirmOverlay');
+      const titleEl = $('kwConfirmTitle');
+      const messageEl = $('kwConfirmMessage');
+      const okBtn = $('kwConfirmOk');
+      const cancelBtn = $('kwConfirmCancel');
+      if (!overlay || !titleEl || !messageEl || !okBtn || !cancelBtn){
+        return Promise.resolve(window.confirm(opts?.message || ''));
+      }
+
+      const settings = {
+        title: opts.title || 'Bestätigung',
+        message: opts.message || '',
+        confirmLabel: opts.confirmLabel || 'OK',
+        cancelLabel: opts.cancelLabel || 'Abbrechen',
+        danger: !!opts.danger
+      };
+
+      return new Promise(resolve => {
+        const previousActive = document.activeElement;
+        const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        overlay.dataset.confirmToken = token;
+        titleEl.textContent = settings.title;
+        const safeMsg = escapeHtml(settings.message).replace(/\n/g, '<br>');
+        messageEl.innerHTML = safeMsg;
+        okBtn.textContent = settings.confirmLabel;
+        cancelBtn.textContent = settings.cancelLabel;
+        okBtn.classList.toggle('danger', settings.danger);
+
+        overlay.removeAttribute('hidden');
+        requestAnimationFrame(() => overlay.classList.add('open'));
+
+        let settled = false;
+        const ANIM_MS = 200;
+
+        function finish(result){
+          if (settled) return;
+          settled = true;
+          overlay.classList.remove('open');
+          setTimeout(()=>{
+            if (overlay.dataset.confirmToken === token){
+              overlay.setAttribute('hidden','');
+            }
+          }, ANIM_MS);
+          overlay.removeEventListener('click', onOverlayClick);
+          document.removeEventListener('keydown', onKeyDown);
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          setTimeout(()=>{
+            try{ if (previousActive && typeof previousActive.focus === 'function'){ previousActive.focus(); } }catch{}
+          }, 0);
+          resolve(result);
+        }
+
+        function onOk(ev){ ev.preventDefault(); finish(true); }
+        function onCancel(ev){ ev.preventDefault(); finish(false); }
+        function onOverlayClick(ev){ if (ev.target === overlay) finish(false); }
+        function onKeyDown(ev){
+          if (ev.key === 'Escape'){
+            ev.preventDefault();
+            finish(false);
+            return;
+          }
+          if (ev.key === 'Enter'){
+            if (ev.target === cancelBtn){ return; }
+            ev.preventDefault();
+            finish(true);
+          }
+        }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlayClick);
+        document.addEventListener('keydown', onKeyDown);
+
+        setTimeout(()=>{
+          try{ okBtn.focus(); }catch{}
+        }, 50);
+      });
+    }
+
+    const CUSTOM_MARKER_TYPES = [
+      // Farben/Buchstaben/Shape je Typ (shape: 'circle' | 'rect' | 'triangle')
+      { value:'custom',             label:'Individuell',              letter:'IND',    color:'#00ff33', shape:'circle' },
+      { value:'einsatzstelle',      label:'Einsatzstelle',            letter:'E',   color:'#8fb4ff', shape:'circle' },
+      { value:'meldekopf',          label:'Meldekopf',                letter:'M',   color:'#ffff00', shape:'circle' },
+      { value:'bereitstellungsraum',label:'Bereitstellungsraum',      letter:'B',   color:'#ffff00', shape:'circle' },
+      { value:'log_m',              label:'Logistik Material',        letter:'LOGM',  color:'#ffff00', shape:'circle' },
+      { value:'log_v',              label:'Logistik Versorgung',      letter:'LOGV',  color:'#ffff00', shape:'circle' },
+      { value:'luk',                label:'Leitung-/Koordinationsgruppe',      letter:'LUK',  color:'#ffff00', shape:'circle' },
+      { value:'oel',                label:'Örtliche Einsatzleitung',      letter:'ÖEL',  color:'#ffff00', shape:'circle' },
+      { value:'einsatzleitung',     label:'Einsatzleitung',           letter:'EL',  color:'#ffff00', shape:'rect' },
+      { value:'einsatzabschnittsleitung', label:'Einsatzabschnittsleitung', letter:'EAL', color:'#ffff00', shape:'rect' },
+      { value:'untereinsatzabschnittsleitung', label:'Untereinsatzabschnittsleitung', letter:'UEAL', color:'#ffff00', shape:'rect' },
+      { value:'gefahr',             label:'Gefahrenstelle',           letter:'G',  color:'#ff0000', shape:'triangle' },
+      { value:'schaden',            label:'Schaden',                  letter:'S',  color:'#000000', shape:'triangle', textColor:'#ffffff', strokeColor:'#ffffff' },
+    ];
+    const GEFAHR_HAZARD_OPTIONS = [
+      'Entstehungsbrand',
+      'Flächenbrand',
+      'Fortentwickelter Brand',
+      'Gefahr durch elektrischen Strom',
+      'Gefahr durch Explosion',
+      'Gefahr durch Explosivstoffe',
+      'Gefahr durch Gas',
+      'Gefahr durch gefährliche Stoffe',
+      'Gefahr durch Luftmangel',
+      'Gefahr durch Mineralöl',
+      'Gefahr durch Radioaktivität',
+      'Gefahr durch Wassereinbruch',
+      'Gefahr',
+      'Vollbrand'
+    ];
+    const GEFAHR_HAZARD_OPTION_SET = new Set(GEFAHR_HAZARD_OPTIONS);
+    const DEFAULT_HAZARD_CATEGORY = 'Gefahr';
+    const SCHADEN_DAMAGE_OPTIONS = [
+      'Angeschlagen',
+      'Angeschlagener Raum',
+      'Angeschlagener Raum: Halber Raum',
+      'Angeschlagener Raum: Schwalbennest',
+      'Ausgefüllter Raum',
+      'Ausgefüllter Raum: Schichtung',
+      'Ausgefüllter Raum: Wasser',
+      'Blockiert',
+      'Randtrümmer',
+      'Rutschfläche',
+      'Schichtung',
+      'Teilblockiert',
+      'Teilzerstört',
+      'Zerstört',
+      'Überschwemmtes Gebiet'
+    ];
+    const SCHADEN_DAMAGE_OPTION_SET = new Set(SCHADEN_DAMAGE_OPTIONS);
+    const DEFAULT_SCHADEN_CATEGORY = 'Angeschlagen';
+    const HAZARD_SVG_MARKUP = new Map();
+    const SCHADEN_SVG_MARKUP = new Map();
+    const SVG_RECT_MARKER_TYPES = new Set([
+      'bereitstellungsraum',
+      'einsatzleitung',
+      'einsatzabschnittsleitung',
+      'luk',
+      'oel',
+      'untereinsatzabschnittsleitung'
+    ]);
+    const SVG_CIRCLE_MARKER_TYPES = new Set([
+      'custom',
+      'einsatzstelle',
+      'log_m',
+      'log_v',      
+      'meldekopf'
+    ]);
+    const SVG_TRIANGLE_MARKER_TYPES = new Set([
+      'gefahr',
+      'schaden'
+    ]);
+    const CUSTOM_MARKER_TYPE_MAP = (()=>{
+      const map = {};
+      CUSTOM_MARKER_TYPES.forEach(item => { map[item.value] = item; });
+      return map;
+    })();
+    function getMarkerTypeInfo(type){
+      return CUSTOM_MARKER_TYPE_MAP[type] || CUSTOM_MARKER_TYPE_MAP.custom;
+    }
+
+    function buildSvgMarkerHtml({ color, letter, title, variant = 'rect', textColor, strokeColor }) {
+      const safeColor = escapeHtml(color || '#ffff00');
+      const safeTitle = title ? escapeHtml(title) : '';
+      const ariaAttr = safeTitle ? ` aria-label="${safeTitle}"` : '';
+      const titleAttr = safeTitle ? ` title="${safeTitle}"` : '';
+      const titleTag = safeTitle ? `<title>${safeTitle}</title>` : '';
+      const textContent = letter ? escapeHtml(letter) : '';
+      const safeTextColor = escapeHtml(textColor || '#000000');
+      const safeStrokeColor = escapeHtml(strokeColor || '#000000');
+      if (variant === 'circle'){
+        return `
+          <div class="svg-marker-wrapper"${titleAttr}>
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img"${ariaAttr}>
+              ${titleTag}
+              <circle cx="128" cy="128" r="90" fill="${safeColor}" stroke="${safeStrokeColor}" stroke-width="5" />
+              <polygon points="113,236 143,236 128,252" fill="#000000" stroke="#000000" stroke-width="5" />
+              <text font-family="'Roboto Slab', 'Arial', sans-serif" font-weight="700" font-size="56px" text-anchor="middle" x="128" y="150" fill="${safeTextColor}">${textContent}</text>
+            </svg>
+          </div>
+        `;
+      }
+      if (variant === 'triangle'){
+        return `
+          <div class="svg-marker-wrapper"${titleAttr}>
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img"${ariaAttr}>
+              ${titleTag}
+              <path d="M50,64 L128,192 L206,64 Z" stroke-width="5" stroke="${safeStrokeColor}" fill="${safeColor}" />
+              <text font-family="'Roboto Slab', 'Arial', sans-serif" font-weight="700" font-size="56px" text-anchor="middle" x="128" y="120" fill="${safeTextColor}">${textContent}</text>
+            </svg>
+          </div>
+        `;
+      }
+      return `
+          <div class="svg-marker-wrapper"${titleAttr}>
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img"${ariaAttr}>
+              ${titleTag}
+              <rect fill="${safeColor}" stroke="${safeStrokeColor}" stroke-width="5" x="10" y="64" width="236" height="128" />
+              <polygon points="113,236 143,236 128,252" fill="#000000" stroke="#000000" stroke-width="5" />
+              <text font-family="'Roboto Slab', 'Arial', sans-serif" font-weight="700" font-size="56px" text-anchor="middle" x="128" y="150" fill="${safeTextColor}">${textContent}</text>
+            </svg>
+          </div>
+        `;
+    }
+
+    function createCustomMarkerIcon(data){
+      const rawType = data?.type;
+      const typeValue = (typeof rawType === 'string' && rawType.trim()) ? rawType.trim().toLowerCase() : 'custom';
+      const info = getMarkerTypeInfo(typeValue);
+      const label = (data?.label || '').trim().slice(0, 30);
+      const hazardCategoryRaw = typeValue === 'gefahr' ? String(data?.hazardCategory || '').trim() : '';
+      const hazardCategory = typeValue === 'gefahr'
+        ? (hazardCategoryRaw || DEFAULT_HAZARD_CATEGORY)
+        : '';
+      const damageCategoryRaw = typeValue === 'schaden' ? String(data?.damageCategory || '').trim() : '';
+      const damageCategory = typeValue === 'schaden'
+        ? (damageCategoryRaw || DEFAULT_SCHADEN_CATEGORY)
+        : '';
+      const markerTitle = hazardCategory || damageCategory || label || info.label || '';
+      let letter = String(info.letter || '').trim();
+      if (!letter && label && typeValue !== 'custom'){
+        const upper = label.toUpperCase();
+        const initials = upper.split(/\s+/).filter(Boolean).map(p=>p[0]).join('');
+        letter = (initials || upper.replace(/[^A-Z0-9]/g,'')).slice(0,4);
+      }
+      letter = letter.slice(0,4).toUpperCase();
+      const safeLabel = label ? escapeHtml(label) : '';
+      const labelHtml = safeLabel ? `<div class="cm-label">${safeLabel}</div>` : '';
+      const colorOverride = sanitizeHexColor(data?.color);
+      const colorRaw = colorOverride || info.color || '#ffff00';
+      const safeColor = escapeHtml(colorRaw);
+      const typeClass = (typeValue.replace(/[^a-z0-9_-]/gi,'').toLowerCase()) || 'custom';
+      const isSvgRect = SVG_RECT_MARKER_TYPES.has(typeValue);
+      const isSvgCircle = SVG_CIRCLE_MARKER_TYPES.has(typeValue);
+      const isSvgTriangle = SVG_TRIANGLE_MARKER_TYPES.has(typeValue);
+      if (isSvgRect || isSvgCircle || isSvgTriangle){
+        const svgHtml = buildSvgMarkerHtml({
+          color: colorRaw,
+          letter,
+          title: markerTitle,
+          variant: isSvgCircle ? 'circle' : isSvgTriangle ? 'triangle' : 'rect',
+          textColor: info.textColor,
+          strokeColor: info.strokeColor
+        });
+        const svgIconAnchor = isSvgTriangle ? [32, 48] : [32, 64];
+        const svgPopupAnchor = isSvgTriangle ? [0, -48] : [0, -64];
+        return L.divIcon({
+          className: `custom-marker-icon svg-marker-icon type-${typeClass}`,
+          iconSize: [64, 88],
+          iconAnchor: svgIconAnchor,
+          popupAnchor: svgPopupAnchor,
+          html: `${svgHtml}${labelHtml}`
+        });
+      }
+      const shape = info.shape || 'circle';
+      const letterHtml = letter ? `<span class="cm-marker-letter">${escapeHtml(letter)}</span>` : '';
+      const isRect = shape === 'rect';
+      const isTri = shape === 'triangle';
+      const headClass = isRect ? 'cm-rect-head' : isTri ? 'cm-tri-head' : 'cm-circle-head';
+      const tailHtml = '<div class="cm-tail"></div>';
+      const iconAnchor = [18, 48];
+      const shapeClass = isRect ? 'cm-rect' : isTri ? 'cm-tri' : 'cm-circle';
+      const markerClass = `cm-marker ${shapeClass}`;
+      const iconHtml = `
+          <div class="${markerClass}" style="--cm-color:${safeColor}">
+            <div class="${headClass}">${letterHtml}</div>
+            ${tailHtml}
+          </div>
+          ${labelHtml}
+          <div class="cm-shadow"></div>
+        `;
+      return L.divIcon({
+        className: `custom-marker-icon type-${typeClass}`,
+        iconSize: [36, 60],
+        iconAnchor,
+        popupAnchor: [0, -52],
+        html: iconHtml
+      });
+    }
 
     /* ===== Map & Layers ===== */
     function initMap(lat, lng) {
-      const MIN_Z = 5, MAX_Z = 19;
+      const MIN_Z = 7, MAX_Z = 19;
+      const opCtrl = {};
 
       baseOSM = L.tileLayer(
         'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        { attribution: '&copy; OpenStreetMap-Mitwirkende', minZoom: MIN_Z, maxZoom: MAX_Z }
+        { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap-Mitwirkende</a>', minZoom: MIN_Z, maxZoom: MAX_Z }
       );
       baseSat = L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics, and the GIS User Community', minZoom: MIN_Z, maxZoom: MAX_Z }
+        { attribution: 'Imagery &copy; <a href="https://www.esri.com/" target="_blank">Esri</a>, <a href="https://www.maxar.com/" target="_blank">Maxar</a>, Earthstar Geographics, and the GIS User Community', minZoom: MIN_Z, maxZoom: MAX_Z }
       );
 
       map = L.map('map', { center: [lat, lng], zoom: 13, layers: [baseOSM], minZoom: MIN_Z, maxZoom: MAX_Z });
@@ -826,6 +1507,802 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         { position: 'topright', collapsed: true }
       ).addTo(map);
 
+      customMarkerLayer = L.layerGroup().addTo(map);
+      customMarkerLayerVisible = true;
+      try{ layerControl.addOverlay(customMarkerLayer, 'Eigene Marker'); }catch{}
+      map.on('overlayadd', (evt)=>{
+        if (evt.layer === customMarkerLayer){
+          customMarkerLayerVisible = true;
+          updateCustomMarkerVisibilityButton();
+        }
+      });
+      map.on('overlayremove', (evt)=>{
+        if (evt.layer === customMarkerLayer){
+          customMarkerLayerVisible = false;
+          updateCustomMarkerVisibilityButton();
+        }
+      });
+
+      /* === Overlay-Layer + Icons === */
+      
+
+      function bindLinePopups(layer){
+        layer.eachLayer(l=>{
+          const p = l.feature?.properties||{};
+          const title = p.ref || p.name || p.highway || 'Straße';
+          const extra=[];
+          if (p.name) extra.push(`<div><b>Name:</b> ${p.name}</div>`);
+          if (p.ref)  extra.push(`<div><b>Ref:</b> ${p.ref}</div>`);
+          l.bindPopup(`<b>${title}</b>${extra.join('')}`);
+        });
+      }
+
+      function makeRoadBadge(text, color){
+        return L.divIcon({
+          className:'road-badge',
+          html:`<div style="background:${color};color:#fff;font:bold 11px/18px system-ui,sans-serif;padding:0 4px;border-radius:4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.3)">${text}</div>`,
+          iconSize:null
+        });
+      }
+      function collectPOIMarkerPoints(){
+        const pts=[];
+        try{ if (map.hasLayer(fwLayer))  fwLayer.eachLayer(l=>{ if (l.getLatLng) pts.push(map.latLngToLayerPoint(l.getLatLng())); }); }catch{}
+        try{ if (map.hasLayer(thwLayer)) thwLayer.eachLayer(l=>{ if (l.getLatLng) pts.push(map.latLngToLayerPoint(l.getLatLng())); }); }catch{}
+        try{ if (map.hasLayer(hosLayer)) hosLayer.eachLayer(l=>{ if (l.getLatLng) pts.push(map.latLngToLayerPoint(l.getLatLng())); }); }catch{}
+        try{ if (map.hasLayer(polLayer)) polLayer.eachLayer(l=>{ if (l.getLatLng) pts.push(map.latLngToLayerPoint(l.getLatLng())); }); }catch{}
+        // Hydranten (Cluster-Zentren und sichtbare Einzelmarker) berücksichtigen
+        try{ if (map.hasLayer(hydClustLayer)) hydClustLayer.eachLayer(l=>{ if (l.getLatLng) pts.push(map.latLngToLayerPoint(l.getLatLng())); }); }catch{}
+        return pts;
+      }
+
+      const iconFW  = L.divIcon({ className:'badge badge-fw',  html:'FW',  iconSize:[24,24], iconAnchor:[12,12] });
+      const iconTHW = L.divIcon({ className:'badge badge-thw', html:'THW', iconSize:[42,24], iconAnchor:[21,12] });
+      const iconHOS = L.divIcon({ className:'badge badge-hos', html:'KH',  iconSize:[24,24], iconAnchor:[12,12] });
+      const iconPOL = L.divIcon({ className:'badge badge-pol', html:'POL', iconSize:[28,28], iconAnchor:[14,14] });
+      const iconHYD = L.divIcon({ className:'badge badge-hyd', html:'HY',  iconSize:[24,24], iconAnchor:[12,12] });
+      const iconSP  = L.divIcon({ className:'badge badge-sport', html:'SP', iconSize:[24,24], iconAnchor:[12,12] });
+
+      function hydIconForType(tp){
+        const t = String(tp||'').toLowerCase();
+        let fill = '#ef5350'; // pillar default
+        if (t === 'underground') fill = '#ff7043';
+        else if (t === 'wall')   fill = '#f06292';
+        const svg = `
+          <svg width="20" height="24" viewBox="0 0 24 28" aria-hidden="true">
+            <g fill="${fill}" stroke="rgba(0,0,0,0.35)" stroke-width="1">
+              <rect x="9" y="4" width="6" height="6" rx="2"/>
+              <rect x="7" y="10" width="10" height="10" rx="3"/>
+              <circle cx="12" cy="21" r="2"/>
+            </g>
+          </svg>`;
+        const html = `<div style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;">${svg}</div>`;
+        return L.divIcon({ className:'', html, iconSize:[24,24], iconAnchor:[12,12] });
+      }
+
+      // Cluster-Icon für Hydranten (zeigt Anzahl)
+      function makeHydClusterIcon(count){
+        const html = `
+          <div style="position:relative; min-width:36px; height:36px; border-radius:18px; box-shadow:0 3px 8px rgba(0,0,0,.35);">
+            <div style="position:absolute; inset:0; background: radial-gradient(circle at 40% 35%, #ffab91, #e53935);
+                        border:2px solid rgba(255,255,255,.85); border-radius:18px;"></div>
+            <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                        color:#fff; font:bold 13px/1 system-ui; text-shadow:0 1px 2px rgba(0,0,0,.35);">
+              ${count}
+            </div>
+          </div>`;
+        return L.divIcon({ html, className:'', iconSize:[36,36], iconAnchor:[18,18] });
+      }
+      
+      const TYPE_LABEL = {
+        fire_station: 'Feuerwehr',
+        police: 'Polizei',
+        hospital: 'Krankenhaus',
+        thw: 'THW',
+        hydrant: 'Hydrant',
+        sport: 'Sport'
+      };
+
+      function germanHydType(t){
+        const m = { pillar:'Überflurhydrant', underground:'Unterflurhydrant', wall:'Wandhydrant' };
+        const k = String(t||'').toLowerCase();
+        return m[k] || (t||'');
+      }
+      function germanHydPosition(p){
+        const m = { sidewalk:'Gehweg', road:'Fahrbahn', lane:'Fahrspur', verge:'Seitenstreifen', square:'Platz', green:'Grünstreifen', 'parking_lot':'Parkplatz', yard:'Hof', building:'Gebäude' };
+        const k = String(p||'').toLowerCase();
+        return m[k] || (p||'');
+      }
+
+      function onEachPOIPopup(feature, layer){
+        const t = feature.properties || {};
+        const typeLabel = TYPE_LABEL[t._type] || t._type || 'Ort';
+        const title = t._type === 'hydrant' ? (t.ref ? `Hydrant ${t.ref}` : 'Hydrant') : (t.name || t.ref || typeLabel);
+        const lines = [];
+        // Klicks auf POI/Hy‑Marker sollen nicht als Kartenklicks zählen
+        try{
+          layer.on('click', (e)=>{ try{ if (e && e.originalEvent) L.DomEvent.stop(e.originalEvent); }catch{} });
+        }catch{}
+        if (t._type === 'hydrant'){
+          if (t.hydType)      lines.push(`<div><b>Typ:</b> ${germanHydType(t.hydType)}</div>`);
+          if (t.hydPosition)  lines.push(`<div><b>Position:</b> ${germanHydPosition(t.hydPosition)}</div>`);
+          if (t.hydDiameter)  lines.push(`<div><b>Durchmesser:</b> ${t.hydDiameter}</div>`);
+          if (t.hydPressure)  lines.push(`<div><b>Druck:</b> ${t.hydPressure}</div>`);
+          if (t.hydCouplings) lines.push(`<div><b>Kupplungen:</b> ${t.hydCouplings}</div>`);
+          if (t.colour)       lines.push(`<div><b>Farbe:</b> ${t.colour}</div>`);
+          if (t.ref)          lines.push(`<div><b>Ref:</b> ${t.ref}</div>`);
+        } else {
+          if (t.operator) lines.push(`<div><b>Betreiber:</b> ${t.operator}</div>`);
+          if (t.addr)     lines.push(`<div><b>Adresse:</b> ${t.addr}</div>`);
+          if (t.phone)    lines.push(`<div><b>Telefon:</b> ${t.phone}</div>`);
+          if (t.website)  lines.push(`<div><b>Web:</b> <a href="${t.website}" target="_blank" rel="noopener">${t.website}</a></div>`);
+          if (t.ref)      lines.push(`<div><b>Ref:</b> ${t.ref}</div>`);
+        }
+        if (!lines.length) lines.push(`<div style="opacity:.8"><i>keine Daten</i></div>`);
+        layer.bindPopup(`<div class="popup"><h4>${title}</h4>${lines.join('')}</div>`);
+      }
+
+      const POI_Z = 1000;
+      fwLayer   = L.geoJSON(null, { pointToLayer:(f,latlng)=>L.marker(latlng,{icon:iconFW,  zIndexOffset:POI_Z}), onEachFeature:onEachPOIPopup });
+      thwLayer  = L.geoJSON(null, { pointToLayer:(f,latlng)=>L.marker(latlng,{icon:iconTHW, zIndexOffset:POI_Z}), onEachFeature:onEachPOIPopup });
+      hosLayer  = L.geoJSON(null, { pointToLayer:(f,latlng)=>L.marker(latlng,{icon:iconHOS, zIndexOffset:POI_Z}), onEachFeature:onEachPOIPopup });
+      polLayer  = L.geoJSON(null, { pointToLayer:(f,latlng)=>L.marker(latlng,{icon:iconPOL, zIndexOffset:POI_Z}), onEachFeature:onEachPOIPopup });
+      spLayer   = L.geoJSON(null, { pointToLayer:(f,latlng)=>L.marker(latlng,{icon:iconSP,  zIndexOffset:POI_Z}), onEachFeature:onEachPOIPopup });
+      // Single cluster group for hydrants + in-memory marker buckets per type
+      hydClustLayer = L.markerClusterGroup({
+        showCoverageOnHover:false,
+        maxClusterRadius: 42,
+        spiderfyOnMaxZoom:true,
+        disableClusteringAtZoom: 18,
+        iconCreateFunction: (cluster)=> makeHydClusterIcon(cluster.getChildCount())
+      });
+      let hydMarkers = { pillar:[], underground:[], wall:[], unknown:[] };
+      let hydCountsLast = { pillar:0, underground:0, wall:0, unknown:0 };
+      // Zuletzt aktiv gesetzte Typen im Cluster, um Diff-Updates auszuführen
+      let hydLastAllowed = new Set();
+      // Interner Schalter, um UI-Hide/Show beim kurzzeitigen Neuaufbau zu unterdrücken
+      let hydInternalUpdate = false;
+      
+      
+      layerControl.addOverlay(fwLayer,  'Feuerwehren');
+      layerControl.addOverlay(thwLayer, 'THW');
+      layerControl.addOverlay(hosLayer, 'Krankenhäuser');
+      layerControl.addOverlay(polLayer, 'Polizei');
+      layerControl.addOverlay(spLayer,  'Sport');
+      layerControl.addOverlay(hydClustLayer, 'Hydranten');
+
+      // Mapping: Layer → Anzeigename (für Hinweise)
+      const overlayNames = new Map([
+        [fwLayer,'Feuerwehren'], [thwLayer,'THW'], [hosLayer,'Krankenhäuser'], [polLayer,'Polizei'], [spLayer,'Sport'], [hydClustLayer,'Hydranten']
+      ]);
+
+      // Mapping: Layer → Panel-Checkbox-ID (für Live-Sync)
+      const overlayChkByLayer = new Map([
+        [fwLayer,'olFW'], [thwLayer,'olTHW'], [hosLayer,'olHOS'], [polLayer,'olPOL'], [spLayer,'olSP'], [hydClustLayer,'olHYD']
+      ]);
+
+      // Set von Layern, die aufgrund zu geringer Zoomstufe temporär entfernt wurden
+      window.kwZoomSuppressed = window.kwZoomSuppressed || new Set();
+
+      // Per-Overlay Mindestzoom
+      const overlayMinZoom = new Map([
+        [fwLayer, OVERLAY_MIN_Z],
+        [thwLayer, OVERLAY_MIN_Z_THW],
+        [hosLayer, OVERLAY_MIN_Z],
+        [polLayer, OVERLAY_MIN_Z],
+        [spLayer, OVERLAY_MIN_Z],
+        [hydClustLayer, 15]
+      ]);
+      
+      /* === Overpass Endpoints + Fetch === */
+      const OP_ENDPOINTS = [
+        'https://overpass-api.de/api/interpreter',
+        'https://lz4.overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://overpass.openstreetmap.ru/api/interpreter',
+        'https://overpass.osm.ch/api/interpreter'
+      ];
+      let opIndex = 0;
+
+      async function overpassFetch(q, { signal, backoffMs=700, clientTimeoutMs=10000, parallel=2 } = {}) {
+        const tried = new Set();
+        const encBody = 'data=' + encodeURIComponent(q);
+
+        function fetchWithTimeout(url, outerSignal){
+          const ctrl = new AbortController();
+          const iv = setTimeout(()=>{ try{ ctrl.abort(); }catch{} }, clientTimeoutMs);
+          const onAbort = ()=>{ try{ ctrl.abort(); }catch{} };
+          try { outerSignal?.addEventListener?.('abort', onAbort, { once:true }); } catch{}
+          return fetch(url, {
+            method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+            body: encBody, signal: ctrl.signal
+          }).finally(()=>{ clearTimeout(iv); try{ outerSignal?.removeEventListener?.('abort', onAbort); }catch{} });
+        }
+
+        let remaining = OP_ENDPOINTS.length;
+        let start = opIndex;
+        while (remaining > 0){
+          const batch = [];
+          for (let i=0; i<Math.min(parallel, remaining); i++){
+            const idx = (start + i) % OP_ENDPOINTS.length;
+            const url = OP_ENDPOINTS[idx]; tried.add(url);
+            batch.push({ idx, url, p: fetchWithTimeout(url, signal).then(res=>({res, idx, url})).catch(err=>({err, idx, url})) });
+          }
+          // Wette auf den schnellsten erfolgreichen
+          const results = await Promise.all(batch.map(b=>b.p));
+          // Bevorzugt: erster OK
+          const ok = results.find(r => r.res && r.res.ok);
+          if (ok){
+            opIndex = (ok.idx + 1) % OP_ENDPOINTS.length;
+            return ok.res.json();
+          }
+          // Falls Rate-Limits: kurzen Backoff und nächste Batch
+          const had429 = results.some(r => r.res && r.res.status === 429);
+          if (had429){
+            await sleep(backoffMs * (0.8 + Math.random()*0.6));
+          }
+          start = (start + batch.length) % OP_ENDPOINTS.length;
+          remaining -= batch.length;
+        }
+        throw new Error('Overpass: kein Endpoint erreichbar (' + [...tried].join(', ') + ')');
+      }
+
+      function bboxString(){
+        const b = map.getBounds();
+        return `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
+      }
+      function quantBounds(prec=2){
+        try{
+          const b = map.getBounds();
+          const m = Math.pow(10, prec);
+          const s = Math.floor(b.getSouth()*m)/m;
+          const w = Math.floor(b.getWest()*m)/m;
+          const n = Math.ceil(b.getNorth()*m)/m;
+          const e = Math.ceil(b.getEast()*m)/m;
+          return [s,w,n,e];
+        }catch{ return null; }
+      }
+      function quantBboxString(prec=2){
+        const qb = quantBounds(prec);
+        if (!qb) return bboxString();
+        return `${qb[0]},${qb[1]},${qb[2]},${qb[3]}`;
+      }
+
+      function boundsArray(){ const b=map.getBounds(); return [b.getSouth(),b.getWest(),b.getNorth(),b.getEast()]; }
+      function boxContains(a,b){ if(!a||!b) return false; return a[0] <= b[0] && a[1] <= b[1] && a[2] >= b[2] && a[3] >= b[3]; }
+
+      function overpassToGeoJSONPoints(json, typeLabel, opts={}){
+        const feats=[];
+        (json.elements||[]).forEach(el=>{
+          let lat=null, lon=null;
+          if (el.type==='node'){ lat=el.lat; lon=el.lon; }
+          else if (el.center){ lat=el.center.lat; lon=el.center.lon; }
+          else if (el.bounds){
+            lat=(el.bounds.minlat+el.bounds.maxlat)/2;
+            lon=(el.bounds.minlon+el.bounds.maxlon)/2;
+          }
+          if (lat==null || lon==null) return;
+          const tags=el.tags||{};
+
+          const addrParts=[];
+          if (tags['addr:street']) addrParts.push(tags['addr:street'] + (tags['addr:housenumber'] ? ' ' + tags['addr:housenumber'] : ''));
+          if (tags['addr:postcode'] || tags['addr:city']) addrParts.push([tags['addr:postcode'], tags['addr:city']].filter(Boolean).join(' '));
+          const isHyd = (typeLabel === 'hydrant');
+          const hydProps = isHyd ? {
+            hydType:      tags['fire_hydrant:type'] || '',
+            hydPosition:  tags['fire_hydrant:position'] || '',
+            hydDiameter:  tags['fire_hydrant:diameter'] || '',
+            hydPressure:  tags['fire_hydrant:pressure'] || '',
+            hydCouplings: tags['fire_hydrant:couplings'] || '',
+          } : {};
+          feats.push({
+            type:'Feature',
+            geometry:{ type:'Point', coordinates:[lon,lat] },
+            properties:{
+              _type:typeLabel,
+              name: tags.name||'',
+              operator: tags.operator||'',
+              phone: tags.phone||tags['contact:phone']||'',
+              website: tags.website||tags['contact:website']||'',
+              ref: tags.ref||'',
+              addr: addrParts.filter(Boolean).join(', '),
+              colour: tags.colour || '',
+              ...hydProps
+            }
+          });
+        });
+        return { type:'FeatureCollection', features:feats };
+      }
+
+      function waysToGeoJSON(j){
+        const gj={ type:'FeatureCollection', features:[] };
+        (j?.elements||[]).forEach(el=>{
+          if (el.type==='way' && el.geometry){
+            gj.features.push({
+              type:'Feature',
+              properties:{
+                highway: el.tags?.highway || '',
+                name: el.tags?.name || '',
+                ref:  el.tags?.ref  || ''
+              },
+              geometry:{ type:'LineString', coordinates: el.geometry.map(g=>[g.lon,g.lat]) }
+            });
+          }
+        });
+        return gj;
+      }
+
+      // Straßen-Badges und zugehörige Hilfsfunktionen entfernt
+
+      function zoomOk12(){ return map.getZoom() >= OVERLAY_MIN_Z; }
+      function zoomOkTHW(){ return map.getZoom() >= OVERLAY_MIN_Z_THW; }
+
+      // Straßen-Badges Lade- & Cache-Logik entfernt
+
+      function loadFW(opts={}){
+        const immediate = !!opts.immediate;
+        const run = async ()=>{
+          const newBox = boundsArray();
+          const qbbox = quantBboxString();
+          const qboxArr = quantBounds();
+          // Zoom-in/Pan-inside: Anzeige beibehalten, kein Reload
+          if (lastFWBox && boxContains(lastFWBox, (qboxArr||newBox))) {
+            let filled = false;
+            try{
+              const empty = (fwLayer.getLayers?.().length||0)===0;
+              if (!empty) filled = true;
+              else if (lastFWData){ fwLayer.addData(lastFWData); filled = true; }
+            }catch{}
+            if (filled){ setStatusState('FW','ok','Stand '+fmtHM(new Date())); return; }
+            // sonst weiter unten normal laden
+          }
+          // Sicherstellen: Layer ist sichtbar, wenn Checkbox gesetzt und Zoom ok
+          if (!map.hasLayer(fwLayer)) {
+            try{
+              const chkId = overlayChkByLayer.get(fwLayer);
+              const el = chkId ? $(chkId) : null;
+              if (el && el.checked && map.getZoom()>=OVERLAY_MIN_Z){ fwLayer.addTo(map); }
+            }catch{}
+            if (!map.hasLayer(fwLayer)) { return; }
+          }
+          if (!zoomOk12()){ fwLayer.clearLayers(); setStatusState('FW', null, ''); return; }
+          if (cbIsBlocked('fw')){ const t=new Date(opBreaker.fw.until); setStatusState('FW','paused','Pause bis '+fmtHM(t)); return; }
+          setStatusState('FW','loading','lädt…'); showLoading();
+          const q = `[out:json][timeout:15]; ( nwr["amenity"="fire_station"](${qbbox}); ); out center tags bb;`;
+          try{
+            opCtrl?.fw?.abort?.();
+            opCtrl.fw = new AbortController();
+            const key = 'fw|'+qbbox;
+            let j = cacheGet(key);
+            if (!j){ j = await overpassFetch(q, { signal: opCtrl.fw.signal }); cacheSet(key, j); }
+            const gj = overpassToGeoJSONPoints(j, 'fire_station');
+            const cnt = Array.isArray(gj.features) ? gj.features.length : 0;
+            if (cnt > 0){
+              fwLayer.clearLayers();
+              fwLayer.addData(gj);
+              lastFWBox = qboxArr || newBox; lastFWData = gj;
+            } else {
+              // Fallback: alte Daten sichtbar behalten
+              if ((fwLayer.getLayers?.().length||0)===0 && lastFWData){
+                fwLayer.addData(lastFWData);
+              }
+            }
+            // Sicherstellen, dass der Layer sichtbar ist
+            try{
+              const elId = overlayChkByLayer.get(fwLayer); const el = elId?$(elId):null;
+              if (el && el.checked && !map.hasLayer(fwLayer)) fwLayer.addTo(map);
+            }catch{}
+            // Nudge Layout, damit Marker sofort sichtbar werden
+            try{ map.invalidateSize(); }catch{}
+            cbOnSuccess('fw'); setStatusState('FW','ok','Stand '+fmtHM(new Date())); try{ updateOverlayCounts(); }catch{}
+          }catch(e){ if (e.name!=='AbortError'){ console.warn('Overpass Feuerwehr-Fehler:', e); cbOnFail('fw'); const b=opBreaker.fw; if (cbIsBlocked('fw')) setStatusState('FW','paused','Pause bis '+fmtHM(new Date(b.until))); else setStatusState('FW','error','Fehler'); } } finally { hideLoading(); }
+        };
+        if (immediate) { run(); } else {
+          if (overpassTimers.fw) clearTimeout(overpassTimers.fw);
+          overpassTimers.fw = setTimeout(run, 250);
+        }
+      }
+
+      function loadTHW(opts={}){
+        const immediate = !!opts.immediate;
+        const run = async ()=>{
+          const newBox = boundsArray();
+          const reqKey = 'thw|' + newBox.join(','); reqTHWKey = reqKey;
+          if (lastTHWBox && boxContains(lastTHWBox, newBox)) {
+            let filled = false;
+            try{
+              const empty = (thwLayer.getLayers?.().length||0)===0;
+              if (!empty) filled = true;
+              else if (lastTHWData){ thwLayer.addData(lastTHWData); filled = true; }
+            }catch{}
+            if (filled){ setStatusState('THW','ok','Stand '+fmtHM(new Date())); return; }
+          }
+          if (!map.hasLayer(thwLayer)) {
+            try{
+              const chkId = overlayChkByLayer.get(thwLayer);
+              const el = chkId ? $(chkId) : null;
+              if (el && el.checked && map.getZoom()>=OVERLAY_MIN_Z_THW){ thwLayer.addTo(map); }
+            }catch{}
+            if (!map.hasLayer(thwLayer)) { return; }
+          }
+          if (!zoomOkTHW()){ thwLayer.clearLayers(); setStatusState('THW', null, ''); return; }
+          if (cbIsBlocked('thw')){ const t=new Date(opBreaker.thw.until); setStatusState('THW','paused','Pause bis '+fmtHM(t)); return; }
+          setStatusState('THW','loading','lädt…'); showLoading();
+          const qbbox = quantBboxString(); const qboxArr = quantBounds();
+          // Strenge Wortgrenzen für "THW" (keine Treffer in Wörtern wie "Huthwelker")
+          // Overpass kennt keine \b-Grenzen → alphanumerische Abgrenzung nutzen
+          const thwWord = '(^|[^A-Za-z])THW([^A-Za-z]|$)';
+          // Strenges Matching: Nur Einrichtungen (emergency_service=technical ODER emergency=disaster_response)
+          // UND Bezug zu THW (Name/Operator/Brand) – Fördervereine u.ä. explizit ausschließen
+          const q = `[out:json][timeout:15];
+            (
+              nwr["amenity"="emergency_service"]["emergency_service"="technical"]["name"~"${thwWord}",i](${qbbox});
+              nwr["amenity"="emergency_service"]["emergency_service"="technical"]["brand"~"${thwWord}",i](${qbbox});
+              nwr["amenity"="emergency_service"]["emergency_service"="technical"]["operator"~"${thwWord}|Technisches Hilfswerk",i]["operator"!~"förderverein|foerderverein|verein",i](${qbbox});
+              nwr["emergency"="disaster_response"]["name"~"${thwWord}",i](${qbbox});
+              nwr["emergency"="disaster_response"]["brand"~"${thwWord}",i](${qbbox});
+              nwr["emergency"="disaster_response"]["operator"~"${thwWord}|Technisches Hilfswerk",i]["operator"!~"förderverein|foerderverein|verein",i](${qbbox});
+            );
+            out center tags bb;`;
+          try{
+            opCtrl?.thw?.abort?.();
+            opCtrl.thw = new AbortController();
+            const key = 'thw|'+qbbox;
+            let j = cacheGet(key);
+            if (!j){ j = await overpassFetch(q, { signal: opCtrl.thw.signal }); cacheSet(key, j); }
+            if (reqTHWKey !== reqKey) return; // veraltete Antwort ignorieren
+            const gj = overpassToGeoJSONPoints(j, 'thw');
+            const cnt = Array.isArray(gj.features) ? gj.features.length : 0;
+            if (cnt > 0){
+              thwLayer.clearLayers();
+              thwLayer.addData(gj);
+              lastTHWBox = qboxArr || newBox; lastTHWData = gj;
+            } else {
+              if ((thwLayer.getLayers?.().length||0)===0 && lastTHWData){ thwLayer.addData(lastTHWData); }
+            }
+            try{
+              const elId = overlayChkByLayer.get(thwLayer); const el = elId?$(elId):null;
+              if (el && el.checked && !map.hasLayer(thwLayer)) thwLayer.addTo(map);
+            }catch{}
+            try{ map.invalidateSize(); }catch{}
+            cbOnSuccess('thw'); setStatusState('THW','ok','Stand '+fmtHM(new Date())); try{ updateOverlayCounts(); }catch{}
+          }catch(e){ if (e.name!=='AbortError'){ console.warn('Overpass THW-Fehler:', e); cbOnFail('thw'); const b=opBreaker.thw; if (cbIsBlocked('thw')) setStatusState('THW','paused','Pause bis '+fmtHM(new Date(b.until))); else setStatusState('THW','error','Fehler'); } } finally { hideLoading(); }
+        };
+        if (immediate) { run(); } else {
+          if (overpassTimers.thw) clearTimeout(overpassTimers.thw);
+          overpassTimers.thw = setTimeout(run, 250);
+        }
+      }
+
+      function loadHOS(opts={}){
+        const immediate = !!opts.immediate;
+        const run = async ()=>{
+          const newBox = boundsArray();
+          const qbbox = quantBboxString();
+          const qboxArr = quantBounds();
+          const reqKey = 'hos|' + (qboxArr||newBox).join(','); reqHOSKey = reqKey;
+          if (lastHOSBox && boxContains(lastHOSBox, newBox)) {
+            let filled = false;
+            try{
+              const empty = (hosLayer.getLayers?.().length||0)===0;
+              if (!empty) filled = true;
+              else if (lastHOSData){ hosLayer.addData(lastHOSData); filled = true; }
+            }catch{}
+            if (filled){ setStatusState('HOS','ok','Stand '+fmtHM(new Date())); return; }
+          }
+          if (!map.hasLayer(hosLayer)) {
+            try{
+              const chkId = overlayChkByLayer.get(hosLayer);
+              const el = chkId ? $(chkId) : null;
+              if (el && el.checked && map.getZoom()>=OVERLAY_MIN_Z){ hosLayer.addTo(map); }
+            }catch{}
+            if (!map.hasLayer(hosLayer)) { return; }
+          }
+          if (!zoomOk12()){ hosLayer.clearLayers(); setStatusState('HOS', null, ''); return; }
+          if (cbIsBlocked('hos')){ const t=new Date(opBreaker.hos.until); setStatusState('HOS','paused','Pause bis '+fmtHM(t)); return; }
+          setStatusState('HOS','loading','lädt…'); showLoading();
+          const q = `[out:json][timeout:15]; ( nwr["amenity"="hospital"](${qbbox}); ); out center tags bb;`;
+          try{
+            opCtrl?.hos?.abort?.();
+            opCtrl.hos = new AbortController();
+            const key = 'hos|'+qbbox;
+            let j = cacheGet(key);
+            if (!j){ j = await overpassFetch(q, { signal: opCtrl.hos.signal }); cacheSet(key, j); }
+            if (reqHOSKey !== reqKey) return; // veraltete Antwort ignorieren
+            const gj = overpassToGeoJSONPoints(j, 'hospital');
+            const cnt = Array.isArray(gj.features) ? gj.features.length : 0;
+            if (cnt > 0){
+              hosLayer.clearLayers();
+              hosLayer.addData(gj);
+              lastHOSBox = qboxArr || newBox; lastHOSData = gj;
+            } else {
+              if ((hosLayer.getLayers?.().length||0)===0 && lastHOSData){ hosLayer.addData(lastHOSData); }
+            }
+            try{
+              const elId = overlayChkByLayer.get(hosLayer); const el = elId?$(elId):null;
+              if (el && el.checked && !map.hasLayer(hosLayer)) hosLayer.addTo(map);
+            }catch{}
+            try{ map.invalidateSize(); }catch{}
+            cbOnSuccess('hos'); setStatusState('HOS','ok','Stand '+fmtHM(new Date())); try{ updateOverlayCounts(); }catch{}
+          }catch(e){ if (e.name!=='AbortError'){ console.warn('Overpass Hospital-Fehler:', e); cbOnFail('hos'); const b=opBreaker.hos; if (cbIsBlocked('hos')) setStatusState('HOS','paused','Pause bis '+fmtHM(new Date(b.until))); else setStatusState('HOS','error','Fehler'); } } finally { hideLoading(); }
+        };
+        if (immediate) { run(); } else {
+          if (overpassTimers.hos) clearTimeout(overpassTimers.hos);
+          overpassTimers.hos = setTimeout(run, 250);
+        }
+      }
+
+      function loadPOL(opts={}){
+        const immediate = !!opts.immediate;
+        const run = async ()=>{
+          const newBox = boundsArray();
+          const qbbox = quantBboxString();
+          const qboxArr = quantBounds();
+          const reqKey = 'pol|' + (qboxArr||newBox).join(','); reqPOLKey = reqKey;
+          if (lastPOLBox && boxContains(lastPOLBox, newBox)) {
+            let filled = false;
+            try{
+              const empty = (polLayer.getLayers?.().length||0)===0;
+              if (!empty) filled = true;
+              else if (lastPOLData){ polLayer.addData(lastPOLData); filled = true; }
+            }catch{}
+            if (filled){ setStatusState('POL','ok','Stand '+fmtHM(new Date())); return; }
+          }
+          if (!map.hasLayer(polLayer)) {
+            try{
+              const chkId = overlayChkByLayer.get(polLayer);
+              const el = chkId ? $(chkId) : null;
+              if (el && el.checked && map.getZoom()>=OVERLAY_MIN_Z){ polLayer.addTo(map); }
+            }catch{}
+            if (!map.hasLayer(polLayer)) { return; }
+          }
+          if (!zoomOk12()){ polLayer.clearLayers(); setStatusState('POL', null, ''); return; }
+          if (cbIsBlocked('pol')){ const t=new Date(opBreaker.pol.until); setStatusState('POL','paused','Pause bis '+fmtHM(t)); return; }
+          setStatusState('POL','loading','lädt…'); showLoading();
+          const q = `[out:json][timeout:15]; ( nwr["amenity"="police"](${qbbox}); ); out center tags bb;`;
+          try{
+            opCtrl?.pol?.abort?.();
+            opCtrl.pol = new AbortController();
+            const key = 'pol|'+qbbox;
+            let j = cacheGet(key);
+            if (!j){ j = await overpassFetch(q, { signal: opCtrl.pol.signal }); cacheSet(key, j); }
+            if (reqPOLKey !== reqKey) return; // veraltete Antwort ignorieren
+            const gj = overpassToGeoJSONPoints(j, 'police');
+            const cnt = Array.isArray(gj.features) ? gj.features.length : 0;
+            if (cnt > 0){
+              polLayer.clearLayers();
+              polLayer.addData(gj);
+              lastPOLBox = qboxArr || newBox; lastPOLData = gj;
+            } else {
+              if ((polLayer.getLayers?.().length||0)===0 && lastPOLData){ polLayer.addData(lastPOLData); }
+            }
+            try{
+              const elId = overlayChkByLayer.get(polLayer); const el = elId?$(elId):null;
+              if (el && el.checked && !map.hasLayer(polLayer)) polLayer.addTo(map);
+            }catch{}
+            try{ map.invalidateSize(); }catch{}
+            cbOnSuccess('pol'); setStatusState('POL','ok','Stand '+fmtHM(new Date())); try{ updateOverlayCounts(); }catch{}
+          }catch(e){ if (e.name!=='AbortError'){ console.warn('Overpass Polizei-Fehler:', e); cbOnFail('pol'); const b=opBreaker.pol; if (cbIsBlocked('pol')) setStatusState('POL','paused','Pause bis '+fmtHM(new Date(b.until))); else setStatusState('POL','error','Fehler'); } } finally { hideLoading(); }
+        };
+        if (immediate) { run(); } else {
+          if (overpassTimers.pol) clearTimeout(overpassTimers.pol);
+          overpassTimers.pol = setTimeout(run, 250);
+        }
+      }
+
+      function loadSP(opts={}){
+        const immediate = !!opts.immediate;
+        const run = async ()=>{
+          const newBox = boundsArray();
+          const qbbox = quantBboxString();
+          const qboxArr = quantBounds();
+          const reqKey = 'sport|' + (qboxArr||newBox).join(','); reqSPKey = reqKey;
+          if (lastSPBox && boxContains(lastSPBox, newBox)) {
+            let filled = false;
+            try{
+              const empty = (spLayer.getLayers?.().length||0)===0;
+              if (!empty) filled = true;
+              else if (lastSPData){ spLayer.addData(lastSPData); filled = true; }
+            }catch{}
+            if (filled){ setStatusState('SP','ok','Stand '+fmtHM(new Date())); return; }
+          }
+          if (!map.hasLayer(spLayer)) {
+            try{
+              const chkId = overlayChkByLayer.get(spLayer);
+              const el = chkId ? $(chkId) : null;
+              if (el && el.checked && map.getZoom()>=OVERLAY_MIN_Z){ spLayer.addTo(map); }
+            }catch{}
+            if (!map.hasLayer(spLayer)) { return; }
+          }
+          if (!zoomOk12()){ spLayer.clearLayers(); setStatusState('SP', null, ''); return; }
+          if (cbIsBlocked('sport')){ const t=new Date(opBreaker.sport.until); setStatusState('SP','paused','Pause bis '+fmtHM(t)); return; }
+          setStatusState('SP','loading','lädt…'); showLoading();
+          // Nur Fußballplätze, Stadien, Sporthallen (Schule). Kein Tennis/Fitness/Squash/Klettern/Schwimmen u.ä.
+          const hallName = '(^|[^A-Za-z])(Sporthalle|Turnhalle|Schulsporthalle|Mehrzweckhalle|Dreifeldhalle|Zweifeldhalle)([^A-Za-z]|$)';
+          const excl = 'tennis|squash|climb|kletter|boulder|swim|schwimm|diving|tauchen|fitness|studio';
+          const q = `[out:json][timeout:15];
+            (
+              nwr["leisure"="pitch"]["sport"~"soccer|football",i](${qbbox});
+              nwr["leisure"="stadium"](${qbbox});
+              nwr["building"="sports_hall"]["sport"!~"${excl}",i]["name"!~"${excl}|hallenbad|bad",i](${qbbox});
+              nwr["leisure"="sports_centre"]["name"~"${hallName}",i](${qbbox});
+              nwr["name"~"${hallName}",i][~"^(building|leisure)$"~"."](${qbbox});
+            );
+            out center tags bb;`;
+          try{
+            opCtrl?.sport?.abort?.();
+            opCtrl.sport = new AbortController();
+            const key = 'sport|'+qbbox;
+            let j = cacheGet(key);
+            if (!j){ j = await overpassFetch(q, { signal: opCtrl.sport.signal }); cacheSet(key, j); }
+            if (reqSPKey !== reqKey) return; // veraltete Antwort ignorieren
+            let gj = overpassToGeoJSONPoints(j, 'sport');
+            // Deduplizieren (Name + Position)
+            try{
+              const seen = new Set();
+              const out = [];
+              (gj.features||[]).forEach(f=>{
+                const c = f.geometry?.coordinates||[]; const lat = c[1], lon = c[0];
+                if (lat==null||lon==null) return;
+                const name = String(f.properties?.name||'').trim().toLowerCase();
+                const key = `${name}|${lat.toFixed(5)}|${lon.toFixed(5)}`;
+                if (seen.has(key)) return; seen.add(key); out.push(f);
+              });
+              gj = { type:'FeatureCollection', features: out };
+            }catch{}
+            const cnt = Array.isArray(gj.features) ? gj.features.length : 0;
+            if (cnt > 0){
+              spLayer.clearLayers();
+              spLayer.addData(gj);
+              lastSPBox = qboxArr || newBox; lastSPData = gj;
+            } else {
+              if ((spLayer.getLayers?.().length||0)===0 && lastSPData){ spLayer.addData(lastSPData); }
+            }
+            try{
+              const elId = overlayChkByLayer.get(spLayer); const el = elId?$(elId):null;
+              if (el && el.checked && !map.hasLayer(spLayer)) spLayer.addTo(map);
+            }catch{}
+            try{ map.invalidateSize(); }catch{}
+            cbOnSuccess('sport'); setStatusState('SP','ok','Stand '+fmtHM(new Date())); try{ updateOverlayCounts(); }catch{}
+          }catch(e){ if (e.name!=='AbortError'){ console.warn('Overpass Sport-Fehler:', e); cbOnFail('sport'); const b=opBreaker.sport; if (cbIsBlocked('sport')) setStatusState('SP','paused','Pause bis '+fmtHM(new Date(b.until))); else setStatusState('SP','error','Fehler'); } } finally { hideLoading(); }
+        };
+        if (immediate) { run(); } else {
+          if (overpassTimers.sport) clearTimeout(overpassTimers.sport);
+          overpassTimers.sport = setTimeout(run, 250);
+        }
+      }
+
+      
+
+      let hydCache = null;
+
+      function loadHYD(opts={}){
+        const immediate = !!opts.immediate;
+        const run = async ()=>{
+          const newBox = boundsArray();
+          const reqKey = 'hyd|' + newBox.join(','); reqHYDKey = reqKey;
+          if (lastHYDBox && boxContains(lastHYDBox, newBox)){
+            // Anzeige sofort aus Buckets aktualisieren, kein Netzabruf
+            try{ applyHydFilter(); setStatusState('HYD','ok','Stand '+fmtHM(new Date())); }catch{}
+            return;
+          }
+          if (!map.hasLayer(hydClustLayer)) {
+            try{
+              const chkId = overlayChkByLayer.get(hydClustLayer);
+              const el = chkId ? $(chkId) : null;
+              if (el && el.checked && map.getZoom()>=15){ hydClustLayer.addTo(map); }
+            }catch{}
+            if (!map.hasLayer(hydClustLayer)) { return; }
+          }
+          if (map.getZoom() < 15){ hydClustLayer?.clearLayers(); setStatusState('HYD', null, ''); return; }
+          if (cbIsBlocked('hyd')){ const t=new Date(opBreaker.hyd.until); setStatusState('HYD','paused','Pause bis '+fmtHM(t)); return; }
+          setStatusState('HYD','loading','lädt…'); showLoading();
+          const q = `[out:json][timeout:15]; ( nwr["emergency"="fire_hydrant"](${bboxString()}); ); out center tags bb;`;
+          try{
+            opCtrl?.hyd?.abort?.();
+            opCtrl.hyd = new AbortController();
+            const key = 'hyd|'+bboxString();
+            let j = cacheGet(key);
+            if (!j){ j = await overpassFetch(q, { signal: opCtrl.hyd.signal }); cacheSet(key, j); }
+            if (reqHYDKey !== reqKey) return; // veraltete Antwort ignorieren
+            // Cache und Filter anwenden
+            hydCache = overpassToGeoJSONPoints(j, 'hydrant');
+            const cnt = Array.isArray(hydCache.features) ? hydCache.features.length : 0;
+            // Marker-Buckets neu aufbauen
+            try{
+              hydMarkers = { pillar:[], underground:[], wall:[], unknown:[] };
+              const feats = hydCache.features || [];
+              for (const f of feats){
+                const coords = f.geometry && f.geometry.coordinates;
+                if (!coords || coords.length < 2) continue;
+                const tp0 = String(f.properties?.hydType||'').toLowerCase();
+                const tp = (tp0==='pillar'||tp0==='underground'||tp0==='wall') ? tp0 : 'unknown';
+                const latlng = L.latLng(coords[1], coords[0]);
+                const m = L.marker(latlng, { icon: hydIconForType(tp) });
+                onEachPOIPopup(f, m);
+                hydMarkers[tp].push(m);
+              }
+            }catch{}
+            if (cnt>0){
+              applyHydFilter();
+              lastHYDBox = newBox;
+            } else {
+              // Fallback: falls nichts kam, aktuelle Anzeige belassen
+              if ((hydClustLayer.getLayers?.().length||0)===0){ applyHydFilter(); }
+            }
+            cbOnSuccess('hyd'); setStatusState('HYD','ok','Stand '+fmtHM(new Date())); try{ updateOverlayCounts(); }catch{}
+          }catch(e){ if (e.name!=='AbortError'){ console.warn('Overpass Hydranten-Fehler:', e); cbOnFail('hyd'); const b=opBreaker.hyd; if (cbIsBlocked('hyd')) setStatusState('HYD','paused','Pause bis '+fmtHM(new Date(b.until))); else setStatusState('HYD','error','Fehler'); } } finally { hideLoading(); }
+        };
+        if (immediate) { run(); } else {
+          if (overpassTimers.hyd) clearTimeout(overpassTimers.hyd);
+          overpassTimers.hyd = setTimeout(run, 250);
+        }
+      }
+
+      function selectedHydTypes(){
+        // Filter entfernt → immer alle Typen zulassen
+        return new Set(['pillar','underground','wall','unknown']);
+      }
+
+      function setHydTypeControlsActive(active){
+        if (active) { try { applyHydFilter(); } catch{} } else { try { hydClustLayer?.clearLayers(); } catch{} }
+      }
+
+      function applyHydFilter(){
+        // Stelle sicher, dass der Cluster-Layer sichtbar ist, wenn Hydranten aktiv sind
+        try{
+          const hydMain = $('olHYD');
+          if (hydMain && hydMain.checked && map.getZoom() >= 15 && !map.hasLayer(hydClustLayer)){
+            hydClustLayer.addTo(map);
+          }
+        }catch{}
+
+        if (!hydCache){
+          // Falls Daten noch nicht geladen sind: bei aktivem Overlay + ausreichendem Zoom nachladen
+          try{
+            const hydMain = $('olHYD');
+            if (hydMain && hydMain.checked && map.getZoom() >= 15){ loadHYD({immediate:true}); }
+          }catch{}
+          hydClustLayer.clearLayers(); updateHydTypeCounts(); return;
+        }
+
+        // Filter entfernt → immer alle Typen anzeigen
+        try{
+          hydInternalUpdate = true;
+          // Stelle sicher, dass Buckets existieren
+          let haveBuckets = (typeof hydMarkers === 'object') && (
+            (hydMarkers.pillar?.length||0) + (hydMarkers.underground?.length||0) + (hydMarkers.wall?.length||0) + (hydMarkers.unknown?.length||0)
+          ) > 0;
+          if (!haveBuckets){
+            try{
+              hydMarkers = { pillar:[], underground:[], wall:[], unknown:[] };
+              const feats = (hydCache && hydCache.features) ? hydCache.features : [];
+              for (const f of feats){
+                const coords = f.geometry && f.geometry.coordinates;
+                if (!coords || coords.length < 2) continue;
+                const tp0 = String(f.properties?.hydType||'').toLowerCase();
+                const tp = (tp0==='pillar'||tp0==='underground'||tp0==='wall') ? tp0 : 'unknown';
+                const latlng = L.latLng(coords[1], coords[0]);
+                const m = L.marker(latlng, { icon: hydIconForType(tp) });
+                onEachPOIPopup(f, m);
+                hydMarkers[tp].push(m);
+              }
+              haveBuckets = true;
+            }catch{}
+          }
+          // Vollständigen Cluster aus allen Typen neu aufbauen
+          hydClustLayer.clearLayers();
+          let arr=[];
+          arr = arr.concat(hydMarkers.pillar||[], hydMarkers.underground||[], hydMarkers.wall||[], hydMarkers.unknown||[]);
+          try{ if (arr.length) hydClustLayer.addLayers(arr); }catch{}
+          try { hydClustLayer.refreshClusters && hydClustLayer.refreshClusters(); } catch {}
+          try { map.invalidateSize(); } catch {}
+        }catch{} finally { hydInternalUpdate = false; }
+        updateHydTypeCounts();
+      }
+
+      function updateHydTypeCounts(){}
+
+      
       /* Sync: Leaflet-Control ↔ Dropdown */
       const baseSel = $('baseLayer');
       const baseIdByLayer = new Map([[baseOSM,'osm'],[baseSat,'esri']]);
@@ -836,7 +2313,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         redrawGridNow();
       });
 
-      /* Zoomanzeige im HUD-Look */
+      /* Zoomanzeige */
       const ZoomInfo = L.Control.extend({
         onAdd: function(){
           const d=document.createElement('div');
@@ -853,7 +2330,33 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         enforceGridMinScale();
         refreshGridOptionsVisibility();
         updateGrid();
+        refreshOverlayZoomState();
         handleZoomNotice(map.getZoom(), MIN_Z, MAX_Z);
+
+        // Dim/disable overlay section in the Leaflet control when zoom < OVERLAY_MIN_Z_THW
+        try {
+          const ok10 = map.getZoom() >= OVERLAY_MIN_Z_THW;
+          const lc = layerControl?._container;
+          if (lc) lc.classList.toggle('kw-overlays-disabled', !ok10);
+        } catch {}
+
+        updateLayerControlOverlayStates(); try{ updateOverlayCounts(); }catch{}
+        enforceOverlayVisibility();
+        // Hydranten-Cluster sofort mit bestehendem Cache/Buckets aktualisieren,
+        // um leere Phase zu vermeiden, bis neue Daten eintreffen
+        try{ if (map.hasLayer(hydClustLayer)) applyHydFilter(); }catch{}
+        try{
+          const zNow = map.getZoom();
+          if (prevZoom == null) prevZoom = zNow;
+          if (zNow > prevZoom){
+            // Beim näher Zoomen sofort aktualisieren
+            refreshVisibleOverlaysImmediate();
+          } else {
+            // Beim Herauszoomen neu laden (debounced)
+            scheduleOverlayRefresh();
+          }
+          prevZoom = zNow;
+        }catch{}
       });
 
       /* Hauptmarker */
@@ -866,16 +2369,214 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
 
       /* Live-HUD */
       map.on('mousemove', e => updateCoordHUD(e.latlng));
+      // Touch: aktualisiere HUD bei Touch-Events (falls unterstützt) und während des Panoramas
+      try{ map.on('touchstart', e => { if (e?.latlng) updateCoordHUD(e.latlng); }); }catch{}
+      try{ map.on('touchmove',  e => { if (e?.latlng) updateCoordHUD(e.latlng); }); }catch{}
+      map.on('move', () => { try{ updateCoordHUD(map.getCenter()); }catch{} });
       updateCoordHUD({lat, lng});
+      const ovHud = $('ovCountHud');
+      function updateOverlayCounts(){
+        try{
+          const b = map.getBounds(); let any=false; const parts=[];
+          function countInLayer(layer){ let c=0; try{ layer.eachLayer(l=>{ const ll=l.getLatLng?l.getLatLng():null; if (ll && b.contains(ll)) c++; }); }catch{}; return c; }
+          const wantFW = $('olFW')?.checked; const wantTHW=$('olTHW')?.checked; const wantHOS=$('olHOS')?.checked; const wantPOL=$('olPOL')?.checked; const wantSP=$('olSP')?.checked;
+          const wantHYD = $('olHYD')?.checked && map.getZoom()>=15;
+          if (wantFW){ parts.push(`FW ${map.hasLayer(fwLayer)?countInLayer(fwLayer):0}`); any=true; }
+          if (wantTHW){ parts.push(`THW ${map.hasLayer(thwLayer)?countInLayer(thwLayer):0}`); any=true; }
+          if (wantHOS){ parts.push(`KH ${map.hasLayer(hosLayer)?countInLayer(hosLayer):0}`); any=true; }
+          if (wantPOL){ parts.push(`POL ${map.hasLayer(polLayer)?countInLayer(polLayer):0}`); any=true; }
+          if (wantSP){ parts.push(`SP ${map.hasLayer(spLayer)?countInLayer(spLayer):0}`); any=true; }
+          if (wantHYD){
+            let n=0;
+            try{
+              if (map.hasLayer(hydClustLayer)){
+                hydClustLayer.eachLayer(l=>{
+                  try{
+                    if (typeof l.getAllChildMarkers === 'function'){
+                      l.getAllChildMarkers().forEach(m=>{ const ll=m.getLatLng&&m.getLatLng(); if (ll && b.contains(ll)) n++; });
+                    } else if (l.getLatLng){ const ll=l.getLatLng(); if (ll && b.contains(ll)) n++; }
+                  }catch{}
+                });
+              } else {
+                (hydCache?.features||[]).forEach(f=>{ const c=f.geometry?.coordinates; if (c && b.contains(L.latLng(c[1],c[0]))) n++; });
+              }
+            }catch{}
+            parts.push(`HYD ${n}`); any=true;
+          }
+          if (ovHud) {
+            if (any){
+              const body = parts.join(' • ');
+              ovHud.innerHTML = `<div class="row"><b>Zusatzanzeige</b></div><div class="row">${body}</div>`;
+              ovHud.style.display = 'block';
+            } else {
+              ovHud.style.display = 'none';
+              ovHud.innerHTML = '';
+            }
+          }
+        }catch{}
+      }
+      try{ window.updateOverlayCounts = updateOverlayCounts; }catch{}
 
-      /* Raster bei Bewegungen neu (Auto) */
+      /* Raster */
       map.on('moveend', () => { if ($('gridType').value !== 'none') updateGrid(); });
 
+      /* Overlays nachladen + Zoom-Gating aktualisieren (debounced) */
+      const DEBOUNCE_MS = 120; // schnelleres Nachladen beim Pannen
+      let moveDebounce = null;
+      // Prefetch-Steuerung (nur für Straßen)
+      function refreshVisibleOverlaysImmediate(){
+        try{
+          const z = map.getZoom();
+          if (z >= OVERLAY_MIN_Z){
+            if (map.hasLayer(fwLayer))  loadFW({immediate:true});
+            if (map.hasLayer(hosLayer)) loadHOS({immediate:true});
+            if (map.hasLayer(polLayer)) loadPOL({immediate:true});
+            if (map.hasLayer(spLayer))  loadSP({immediate:true});
+          }
+          if (z >= OVERLAY_MIN_Z_THW && map.hasLayer(thwLayer)){
+            loadTHW({immediate:true});
+          }
+          if (z >= 15 && map.hasLayer(hydClustLayer)){
+            loadHYD({immediate:true});
+          }
+        }catch{}
+      }
+      function scheduleOverlayRefresh(){
+        if (moveDebounce) clearTimeout(moveDebounce);
+        moveDebounce = setTimeout(()=>{
+          try{
+            const z = map.getZoom();
+            if (z >= OVERLAY_MIN_Z){ loadFW(); loadHOS(); loadPOL(); loadSP(); }
+            if (z >= OVERLAY_MIN_Z_THW){ loadTHW(); }
+            if (z >= 15){ loadHYD(); }
+          }catch{}
+        }, DEBOUNCE_MS);
+      }
+      map.on('moveend', ()=>{
+        scheduleOverlayRefresh(); try{ updateOverlayCounts(); }catch{}
+        if ($('gridType').value !== 'none') updateGrid();
+      });
+      // Entfernt: Straßen-Badges Preload/Rehydrierung während move
+
+      // Entfernt: Straßen-Badges-Layer-Handler
+      fwLayer.on('add', ()=>{ try{ loadFW({immediate:true}); }catch{} });
+      thwLayer.on('add', ()=>{ try{ loadTHW({immediate:true}); }catch{} });
+      hosLayer.on('add', ()=>{ try{ loadHOS({immediate:true}); }catch{} });
+      polLayer.on('add', ()=>{ try{ loadPOL({immediate:true}); }catch{} });
+      spLayer.on('add',  ()=>{ try{ loadSP({immediate:true}); }catch{} });
+      hydClustLayer.on('add', ()=>{ try{
+        if (!hydInternalUpdate && typeof setHydTypeControlsActive==='function') setHydTypeControlsActive(true);
+        // Sofort anzeigen, wenn Daten bereits vorhanden; sonst laden
+        if (hydCache && (hydCache.features?.length||0) > 0){
+          applyHydFilter();
+        } else {
+          loadHYD({immediate:true});
+        }
+      }catch{} });
+      hydClustLayer.on('remove', ()=>{ try{ if (!hydInternalUpdate && typeof setHydTypeControlsActive==='function') setHydTypeControlsActive(false); }catch{} });
+
       handleZoomNotice(map.getZoom(), MIN_Z, MAX_Z);
+      // Initial state for dimming overlays in the Leaflet control
+      try {
+        const lc = layerControl?._container;
+        if (lc) lc.classList.toggle('kw-overlays-disabled', map.getZoom() < OVERLAY_MIN_Z_THW);
+      } catch {}
+
+      // Prevent enabling overlays from the Leaflet control if zoom is too low
+      function showTempNotice(msg, ms=1400){
+        const box = $('zoomNotice');
+        if (!box) return;
+        box.textContent = msg;
+        box.style.display = 'block';
+        clearTimeout(box._hideTimer);
+        box._hideTimer = setTimeout(()=>{ handleZoomNotice(map.getZoom(), MIN_Z, MAX_Z); }, ms);
+      }
+
+      function minZoomForLayer(layer){ return overlayMinZoom.get(layer) ?? OVERLAY_MIN_Z; }
+      let overlaySyncLock = false;
+      map.on('overlayadd', (e) => {
+        const minZ = minZoomForLayer(e.layer);
+        if (map.getZoom() < minZ && overlayNames.has(e.layer)){
+          map.removeLayer(e.layer);
+          const name = overlayNames.get(e.layer) || 'Overlay';
+          showTempNotice(`${name} ab Zoom ${minZ} verfügbar`);
+          }
+        // Straßen sofort nachladen, sobald eines der Straßen-Overlays aktiviert wird
+        // Straßen-Badges entfernt
+        // Panel-Checkbox live mit LayerControl synchronisieren
+        try{
+          if (overlaySyncLock) return;
+          overlaySyncLock = true;
+          const chkId = overlayChkByLayer.get(e.layer);
+          if (chkId){ const el = $(chkId); if (el) { el.checked = true; el.dispatchEvent(new Event('input', { bubbles:true })); } }
+        } finally { overlaySyncLock = false; }
+      });
+
+      map.on('overlayremove', (e) => {
+        // Panel-Checkbox live mit LayerControl synchronisieren – aber bei Zoom-Unterdrückung Haken behalten
+        try{
+          if (overlaySyncLock) return;
+          overlaySyncLock = true;
+          const chkId = overlayChkByLayer.get(e.layer);
+          if (chkId){
+            const el = $(chkId);
+            if (el){
+              if (window.kwZoomSuppressed && window.kwZoomSuppressed.has(e.layer)){
+                // Haken behalten, damit beim Erreichen der Zoomstufe das Overlay wieder erscheint
+                // nichts ändern
+              } else {
+                el.checked = false;
+                el.dispatchEvent(new Event('input', { bubbles:true }));
+              }
+            }
+          }
+        } finally { overlaySyncLock = false; }
+      });
+
+      function updateLayerControlOverlayStates(){
+        try{
+          const lc = layerControl?._container; if (!lc) return;
+          const labels = lc.querySelectorAll('.leaflet-control-layers-overlays label');
+          const z = map.getZoom();
+          const mins = new Map([
+            ['THW', OVERLAY_MIN_Z_THW],
+            ['Feuerwehren', OVERLAY_MIN_Z],
+            ['Krankenhäuser', OVERLAY_MIN_Z],
+            ['Polizei', OVERLAY_MIN_Z],
+            ['Sport', OVERLAY_MIN_Z],
+            ['Hydranten', 15]
+          ]);
+          labels.forEach(l=>{
+            const name = l.textContent?.trim() || '';
+            const min = mins.get(name);
+            if (min == null) return;
+            if (z < min) l.classList.add('kw-item-disabled');
+            else l.classList.remove('kw-item-disabled');
+          });
+        }catch{}
+      }
+      updateLayerControlOverlayStates();
     }
 
     function handleZoomNotice(z, minZ, maxZ){
       const box = $('zoomNotice'); if (!box) return;
+      // Overlay-Gating-Hinweise priorisieren (Hydranten)
+      if (z < OVERLAY_MIN_Z_THW){
+        box.textContent = `THW ab Zoom ${OVERLAY_MIN_Z_THW} • weitere Zusatzanzeige ab Zoom ${OVERLAY_MIN_Z} • Hydranten ab Zoom 15`;
+        box.style.display='block';
+        return;
+      }
+      if (z >= OVERLAY_MIN_Z_THW && z < OVERLAY_MIN_Z){
+        box.textContent = `Weitere Zusatzanzeige ab Zoom ${OVERLAY_MIN_Z} • Hydranten ab Zoom 15`;
+        box.style.display='block';
+        return;
+      }
+      if (z >= OVERLAY_MIN_Z && z < 15){
+        box.textContent = `Hydranten ab Zoom 15`;
+        box.style.display='block';
+        return;
+      }
+      // Sonst nur Minimum/Maximum anzeigen
       if (z === maxZ){ box.textContent = `Maximaler Zoom erreicht (${maxZ})`; box.style.display='block'; return; }
       if (z === minZ){ box.textContent = `Minimaler Zoom erreicht (${minZ})`; box.style.display='block'; return; }
       box.style.display='none';
@@ -1008,7 +2709,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       if (zoom <= 12) return 'utm10';
       return 'utm1';
     }
-    function computeAutoColors(){ return { line:'#ff0000', label:'rgb(0,0,160)' }; }
+    function computeAutoColors(){ return { line:'#ff0000', label:'#0000a0' }; }
     function maybeApplyAutoContrast(){
       const auto = $('gridAutoContrast')?.checked;
       if (!auto) return;
@@ -1019,7 +2720,6 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       if ($('gridLabelColor')) $('gridLabelColor').value = '#0000a0';
     }
 
-    /* Tooltips + Sichtbarkeit/Disable für Grid-Optionen */
     function refreshGridOptionsVisibility(){
       const isNone = $('gridType').value === 'none';
       $('gridOptions').classList.toggle('hidden', isNone);
@@ -1057,7 +2757,11 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       const z = map.getZoom();
       if (type === 'auto') type = getAutoGridType(z);
       if (type === 'none') return;
-      if (type === 'mgrs100' && typeof mgrs !== 'object') type = 'utm10';
+      if (type === 'mgrs100' && typeof mgrs !== 'object'){
+        // Warten bis MGRS geladen ist, dann neu zeichnen
+        try{ mgrsReady?.then?.(()=>{ if ($('gridType').value === 'mgrs100' || ($('gridType').value==='auto' && getAutoGridType(map.getZoom())==='mgrs100')) updateGrid(); }); }catch{}
+        type = 'utm10';
+      }
       if (typeof proj4 !== 'function') return;
 
       try {
@@ -1080,6 +2784,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         };
 
         const drawUtm = (stepMeters) => {
+          const w = Math.max(0.6, 2.2 - 0.1 * z); // dünner bei hohem Zoom
           const samples = 16;
           const eStart = Math.ceil(Emin/stepMeters)*stepMeters;
           const eEnd   = Math.floor(Emax/stepMeters)*stepMeters;
@@ -1093,7 +2798,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
               const ll = proj4(utmDef, 'EPSG:4326', [e,n]);
               pts.push([ll[1], ll[0]]);
             }
-            L.polyline(pts, {color: gridColor, weight:1.6, opacity:0.95}).addTo(gridLayer);
+            L.polyline(pts, {color: gridColor, weight:w, opacity:0.95}).addTo(gridLayer);
             const top = proj4(utmDef,'EPSG:4326',[e,Nmax]);
             addLabel([top[1], top[0]], `E ${Math.round(e)}`);
           }
@@ -1105,15 +2810,16 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
               const ll = proj4(utmDef, 'EPSG:4326', [e,n]);
               pts.push([ll[1], ll[0]]);
             }
-            L.polyline(pts, {color: gridColor, weight:1.6, opacity:0.95}).addTo(gridLayer);
+            L.polyline(pts, {color: gridColor, weight:w, opacity:0.95}).addTo(gridLayer);
             const left = proj4(utmDef,'EPSG:4326',[Emin,n]);
             addLabel([left[1], left[0]], `N ${Math.round(n)}`);
           }
         };
 
         const drawMgrs100 = () => {
+          const w = Math.max(0.6, 2.2 - 0.1 * z);
           if (typeof mgrs !== 'object') return;
-          const step = 100000; // 100 km
+          const step = 100000;
           const eStart = Math.ceil(Emin/step)*step;
           const eEnd   = Math.floor(Emax/step)*step;
           const nStart = Math.ceil(Nmin/step)*step;
@@ -1127,7 +2833,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
                 proj4(utmDef,'EPSG:4326',[e+step, n+step]),
                 proj4(utmDef,'EPSG:4326',[e, n+step]),
               ].map(ll=>[ll[1], ll[0]]);
-              L.polygon(corners, {color: gridColor, weight:1.6, opacity:0.98, fillOpacity:0}).addTo(gridLayer);
+              L.polygon(corners, {color: gridColor, weight:w, opacity:0.98, fillOpacity:0}).addTo(gridLayer);
 
               const mid = proj4(utmDef,'EPSG:4326',[e+step/2, n+step/2]);
               const code = (mgrs.forward([mid[0], mid[1]], 0) || '').toUpperCase().replace(/\s+/g,'');
@@ -1149,9 +2855,132 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
     /* ===== Messen ===== */
     let measureMode = 'none';
     let distMarkers = [], distLine = null;
+    let distHistory = [];
     let areaMarkers = [], areaPoly = null;
+    let areaHistory = [];
     const DIST_MAX_POINTS = 20;
     let stagedClear = false;
+
+    // Einfügen: Vorschau-Marker und Zielinformation
+    let insertPreview = null; // L.Marker mit "+"
+    let insertTarget = null;  // { type:'distance'|'area', index:number, latlng:L.LatLng }
+    let suppressNextMapClick = false; // verhindert Doppel-Setzen nach Insert
+    const INSERT_MAX_PX = 12; // maximaler Pixelabstand zur Linie für Einfüge-Plus
+
+    function ensureInsertPreview(mode){
+      const bg = mode==='distance' ? '#e53935' : '#2e7d32';
+      const icon = L.divIcon({
+        className: 'insert-plus',
+        html: `<div style="width:18px;height:18px;border-radius:50%;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font:bold 12px/18px system-ui;box-shadow:0 1px 6px rgba(0,0,0,.45);transform:translate(-9px,-9px)">+</div>`
+      });
+      if (insertPreview){ insertPreview.setIcon(icon); return insertPreview; }
+      insertPreview = L.marker([0,0], { icon, interactive:false, keyboard:false, opacity:0.95 });
+      return insertPreview;
+    }
+    function hideInsertPreview(){ if (insertPreview){ try{ map.removeLayer(insertPreview); }catch{} } insertTarget=null; }
+
+    // Geometrie-Helfer: nächste Projektion eines Punkts auf Segment in Pixelkoordinaten
+    function nearestOnSegment(a, b, p){
+      const A = map.latLngToLayerPoint(a), B = map.latLngToLayerPoint(b), P = map.latLngToLayerPoint(p);
+      const ABx = B.x - A.x, ABy = B.y - A.y;
+      const APx = P.x - A.x, APy = P.y - A.y;
+      const ab2 = ABx*ABx + ABy*ABy || 1e-9;
+      let t = (APx*ABx + APy*ABy) / ab2; t = Math.max(0, Math.min(1, t));
+      const X = A.x + t*ABx, Y = A.y + t*ABy;
+      const dx = P.x - X, dy = P.y - Y;
+      const d2 = dx*dx + dy*dy;
+      const latlng = map.layerPointToLatLng(L.point(X,Y));
+      return { latlng, d2 };
+    }
+    function findInsertForDistance(mouseLatLng){
+      const latlngs = distMarkers.map(m=>m.getLatLng()); if (latlngs.length<2) return null;
+      let best=null, idx=-1;
+      for (let i=0;i<latlngs.length-1;i++){
+        const cand = nearestOnSegment(latlngs[i], latlngs[i+1], mouseLatLng);
+        if (!best || cand.d2 < best.d2){ best = cand; idx = i; }
+      }
+      if (!best) return null;
+      if (best.d2 > INSERT_MAX_PX*INSERT_MAX_PX) return null;
+      return { index: idx+1, latlng: best.latlng };
+    }
+    function findInsertForArea(mouseLatLng){
+      const latlngs = areaMarkers.map(m=>m.getLatLng()); if (latlngs.length<2) return null;
+      let best=null, idx=-1; const n=latlngs.length;
+      for (let i=0;i<n;i++){
+        const a = latlngs[i], b = latlngs[(i+1)%n];
+        const cand = nearestOnSegment(a, b, mouseLatLng);
+        if (!best || cand.d2 < best.d2){ best = cand; idx = i; }
+      }
+      if (!best) return null;
+      if (best.d2 > INSERT_MAX_PX*INSERT_MAX_PX) return null;
+      return { index: (idx+1)%latlngs.length, latlng: best.latlng };
+    }
+    function attachInsertHandlers(){
+      // Distanzlinie
+      if (distLine && !distLine.__insertHandlers){
+        distLine.on('mousemove', (e)=>{
+          if (measureMode!=='distance') return;
+          const ins = findInsertForDistance(e.latlng); if (!ins) { hideInsertPreview(); return; }
+          ensureInsertPreview('distance').setLatLng(ins.latlng).addTo(map);
+          insertTarget = { type:'distance', index: ins.index, latlng: ins.latlng };
+        });
+        distLine.on('mouseout', hideInsertPreview);
+        distLine.on('click', (e)=>{
+          // nur einen Marker hinzufügen – Ereignis vollständig stoppen
+          try{
+            if (e.originalEvent){ L.DomEvent.stop(e.originalEvent); }
+            else { L.DomEvent.stop(e); }
+          }catch{}
+          // Touch-Unterstützung: ohne Hover/Preview ad hoc Einfügepunkt bestimmen
+          if (!insertTarget || insertTarget.type!=='distance'){
+            try{
+              const ins = findInsertForDistance(e.latlng);
+              if (!ins) return;
+              insertTarget = { type:'distance', index: ins.index, latlng: ins.latlng };
+            }catch{ return; }
+          }
+          suppressNextMapClick = true;
+          const m = attachDistMarker(L.marker(insertTarget.latlng, {draggable:true, icon: iconDist}).addTo(map));
+          distMarkers.splice(insertTarget.index, 0, m); distHistory.push(m);
+          hideInsertPreview();
+          updateDistance();
+        });
+        distLine.__insertHandlers = true;
+      }
+      // Flächenpolygon
+      if (areaPoly && !areaPoly.__insertHandlers){
+        areaPoly.on('mousemove', (e)=>{
+          if (measureMode!=='area') return;
+          const ins = findInsertForArea(e.latlng); if (!ins) { hideInsertPreview(); return; }
+          ensureInsertPreview('area').setLatLng(ins.latlng).addTo(map);
+          insertTarget = { type:'area', index: ins.index, latlng: ins.latlng };
+        });
+        areaPoly.on('mouseout', hideInsertPreview);
+        areaPoly.on('click', (e)=>{
+          try{
+            if (e.originalEvent){ L.DomEvent.stop(e.originalEvent); }
+            else { L.DomEvent.stop(e); }
+          }catch{}
+          // Touch-Unterstützung: ohne Hover/Preview ad hoc Einfügepunkt bestimmen
+          if (!insertTarget || insertTarget.type!=='area'){
+            try{
+              const ins = findInsertForArea(e.latlng);
+              if (!ins) return;
+              insertTarget = { type:'area', index: ins.index, latlng: ins.latlng };
+            }catch{ return; }
+          }
+          suppressNextMapClick = true;
+          const m = L.marker(insertTarget.latlng, {draggable:true, icon: iconArea}).addTo(map);
+          m.on('drag', updateArea);
+          m.on('contextmenu', () => { removeMarkerFrom(areaMarkers, m); updateArea(); });
+          m.on('dblclick',   () => { removeMarkerFrom(areaMarkers, m); updateArea(); });
+          areaMarkers.splice(insertTarget.index, 0, m); areaHistory.push(m);
+          hideInsertPreview();
+          updateArea();
+        });
+        areaPoly.__insertHandlers = true;
+      }
+    }
 
     function fmtDist(m){ if (!Number.isFinite(m)) return ''; const km = m/1000; return (m<1000) ? `${m.toFixed(0)} m` : `${km.toFixed(3)} km (${m.toFixed(0)} m)`; }
     function fmtArea(m2){ if (!Number.isFinite(m2)) return ''; const ha = m2/10000, km2 = m2/1e6; return `${m2.toLocaleString('de-DE',{maximumFractionDigits:0})} m²  (${ha.toFixed(2)} ha, ${km2.toFixed(3)} km²)`; }
@@ -1160,6 +2989,9 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       const i = arr.indexOf(markerRef);
       if (i > -1) arr.splice(i, 1);
       map.removeLayer(markerRef);
+      // auch aus Historien entfernen
+      const di = distHistory.lastIndexOf(markerRef); if (di>-1) distHistory.splice(di,1);
+      const ai = areaHistory.lastIndexOf(markerRef); if (ai>-1) areaHistory.splice(ai,1);
       stagedClear = false;
     }
 
@@ -1172,6 +3004,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         return;
       }
 
+      if (customMarkerMode) setCustomMarkerMode(false);
       measureMode = mode;
       ['measureDist','measureArea'].forEach(id=>$(id).classList.remove('modeActive'));
       if (mode==='distance') $('measureDist').classList.add('modeActive');
@@ -1185,7 +3018,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       } else if (mode==='area') {
         $('measureInfo').innerHTML =
           'Modus <b>Fläche</b>:<br>Klicks fügen Punkte hinzu (Drag&Drop, Rechtsklick entfernt). Polygon schließt automatisch. <br>' +
-          '<b>Entfernen</b>: Entfernt den letzten Punkt.<br><b>Löschen</b>: Löscht zuerst die ganze Fläche, dann Strecke (sofern verhanden).<br><b>Messung beenden</b>: erneut Button <b>Fläche</b> klicken oder ESC.';
+          '<b>Entfernen</b>: Entfernt den letzten Punkt.<br><b>Löschen</b>: Löscht zuerst die ganze Fläche, dann alles.<br><b>Messung beenden</b>: erneut Button <b>Fläche</b> klicken oder ESC.';
       } else {
         $('measureInfo').innerHTML = '';
       }
@@ -1231,6 +3064,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       const latlngs = distMarkers.map(m=>m.getLatLng());
       if (!distLine) distLine = L.polyline(latlngs).addTo(map);
       else distLine.setLatLngs(latlngs);
+      attachInsertHandlers();
 
       let total = 0;
       for (let i=0; i<latlngs.length-1; i++){
@@ -1267,7 +3101,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         return;
       }
       const m = attachDistMarker(L.marker(latlng, {draggable:true, icon: iconDist}).addTo(map));
-      distMarkers.push(m);
+      distMarkers.push(m); distHistory.push(m);
       stagedClear = false;
       updateDistance();
     }
@@ -1296,6 +3130,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       }
       if (!areaPoly) areaPoly = L.polygon(latlngs, {fillOpacity:0.1}).addTo(map);
       else areaPoly.setLatLngs(latlngs);
+      attachInsertHandlers();
       if (latlngs.length>=3){
         const { area, perimeter } = computeAreaUTM(latlngs);
         if (measureMode==='area'){
@@ -1313,12 +3148,621 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       m.on('drag', updateArea);
       m.on('contextmenu', () => { removeMarkerFrom(areaMarkers, m); updateArea(); });
       m.on('dblclick', () => { removeMarkerFrom(areaMarkers, m); updateArea(); });
-      areaMarkers.push(m);
+      areaMarkers.push(m); areaHistory.push(m);
       stagedClear = false;
       updateArea();
     }
 
+    /* ===== Eigene Marker ===== */
+    function detectStorageAvailability(){
+      try{
+        const testKey = '__kw_cm_test__';
+        window.localStorage.setItem(testKey, '1');
+        window.localStorage.removeItem(testKey);
+        return true;
+      } catch(err){
+        console.warn('Lokaler Speicher nicht verfügbar:', err);
+        return false;
+      }
+    }
+
+    function readStoredCustomMarkers(){
+      if (!storageAvailable) return [];
+      try{
+        const raw = window.localStorage.getItem(CUSTOM_MARKER_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.map(item => {
+          const typeRaw = typeof item?.type === 'string' ? item.type : 'custom';
+          const type = CUSTOM_MARKER_TYPE_MAP[typeRaw] ? typeRaw : 'custom';
+          return {
+            id: String(item?.id || '').trim(),
+            lat: Number(item?.lat),
+            lng: Number(item?.lng),
+          text: typeof item?.text === 'string' ? item.text : '',
+          label: typeof item?.label === 'string' ? item.label.slice(0,30) : '',
+          type,
+          showTooltip: !!item?.showTooltip,
+          color: sanitizeHexColor(item?.color) || '',
+          hazardCategory: typeof item?.hazardCategory === 'string' ? item.hazardCategory : '',
+          damageCategory: typeof item?.damageCategory === 'string' ? item.damageCategory : ''
+        };
+        }).filter(item => item.id && !Number.isNaN(item.lat) && !Number.isNaN(item.lng));
+      } catch(err){
+        console.warn('Custom marker storage read failed:', err);
+        return [];
+      }
+    }
+
+    function writeStoredCustomMarkers(){
+      if (!storageAvailable) return;
+      try{
+        const payload = Array.from(customMarkers.values()).map(entry => ({
+          id: entry.data.id,
+          lat: entry.data.lat,
+          lng: entry.data.lng,
+          text: entry.data.text || '',
+          label: (entry.data.label || '').slice(0,30),
+          type: entry.data.type || 'custom',
+          showTooltip: !!entry.data.showTooltip,
+          color: sanitizeHexColor(entry.data.color) || '',
+          hazardCategory: typeof entry.data.hazardCategory === 'string' ? entry.data.hazardCategory : '',
+          damageCategory: typeof entry.data.damageCategory === 'string' ? entry.data.damageCategory : ''
+        }));
+        window.localStorage.setItem(CUSTOM_MARKER_STORAGE_KEY, JSON.stringify(payload));
+      } catch(err){
+        console.warn('Custom marker storage write failed:', err);
+        storageAvailable = false;
+        updateCustomMarkerHint();
+      }
+    }
+
+    function ensureCustomMarkerLayer(){
+      if (!customMarkerLayer){
+        customMarkerLayer = L.layerGroup();
+        if (map){
+          customMarkerLayer.addTo(map);
+          if (layerControl){
+            try{ layerControl.addOverlay(customMarkerLayer, 'Eigene Marker'); }catch{}
+          }
+        }
+      }
+      return customMarkerLayer;
+    }
+
+    function makeCustomMarkerId(){
+      return 'cm-' + Math.random().toString(36).slice(2,8) + Date.now().toString(36);
+    }
+
+    function updateCustomMarkerTooltip(entry){
+      try{
+        const note = (entry.data.text || '').trim();
+        if (entry.data.showTooltip && note){
+          const html = escapeHtml(note).replace(/\r?\n/g,'<br>');
+          const opts = { direction:'top', offset:[0,-20], opacity:0.95, className:'custom-marker-tooltip', sticky:true, permanent:false, pane:'tooltipPane' };
+          const tooltip = entry.marker.getTooltip();
+          if (tooltip){
+            tooltip.setContent(html);
+            tooltip.options.offset = opts.offset;
+            if (typeof tooltip.update === 'function') tooltip.update();
+          } else {
+            entry.marker.bindTooltip(html, opts);
+          }
+        } else if (entry.marker.getTooltip()){
+          entry.marker.unbindTooltip();
+        }
+      }catch(err){ console.warn('Tooltip update fehlgeschlagen', err); }
+    }
+
+    function updateCustomMarkerHint(extra){
+      const hint = $('customMarkerHint');
+      if (!hint) return;
+      if (!hint.dataset.base){ hint.dataset.base = hint.innerHTML; }
+      if (typeof extra === 'string'){ hint.dataset.extra = extra; }
+      const base = hint.dataset.base;
+      const count = customMarkers.size;
+      const countText = storageAvailable
+        ? `Aktuell ${count} Marker gespeichert.`
+        : `Speichern im Browser nicht verfügbar – Marker bleiben nur bis zum Schließen (${count}).`;
+      const extraText = hint.dataset.extra || '';
+      const extraHtml = extraText ? `<br>${extraText}` : '';
+      hint.innerHTML = `${base}<br>${countText}${extraHtml}`;
+      const clearBtn = $('customMarkerClear');
+      if (clearBtn) clearBtn.disabled = count === 0;
+    }
+
+    function buildCustomMarkerPopup(entry){
+      const container = document.createElement('div');
+      container.className = 'custom-marker-popup';
+
+      const typeLabel = document.createElement('label');
+      const typeSelectId = `cm-type-${entry.data.id}`;
+      typeLabel.setAttribute('for', typeSelectId);
+      typeLabel.textContent = 'Typ';
+      container.appendChild(typeLabel);
+
+      const typeSelect = document.createElement('select');
+      typeSelect.id = typeSelectId;
+      CUSTOM_MARKER_TYPES.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.value;
+        opt.textContent = item.label;
+        typeSelect.appendChild(opt);
+      });
+      const currentType = CUSTOM_MARKER_TYPE_MAP[entry.data.type] ? entry.data.type : 'custom';
+      typeSelect.value = currentType;
+      container.appendChild(typeSelect);
+
+      const hazardLabel = document.createElement('label');
+      const hazardSelectId = `cm-hazard-${entry.data.id}`;
+      hazardLabel.setAttribute('for', hazardSelectId);
+      hazardLabel.textContent = 'Gefahrenlage';
+      hazardLabel.style.display = 'none';
+      container.appendChild(hazardLabel);
+
+      const hazardSelect = document.createElement('select');
+      hazardSelect.id = hazardSelectId;
+      hazardSelect.style.display = 'none';
+      hazardSelect.disabled = true;
+      hazardSelect.tabIndex = -1;
+      const hazardPlaceholder = document.createElement('option');
+      hazardPlaceholder.value = '';
+      hazardPlaceholder.textContent = 'Gefahrenlage auswählen';
+      hazardSelect.appendChild(hazardPlaceholder);
+      GEFAHR_HAZARD_OPTIONS.forEach(labelText => {
+        const opt = document.createElement('option');
+        opt.value = labelText;
+        opt.textContent = labelText;
+        hazardSelect.appendChild(opt);
+      });
+      let pendingHazardCategory = typeof entry.data.hazardCategory === 'string' ? entry.data.hazardCategory : '';
+      if (pendingHazardCategory && !GEFAHR_HAZARD_OPTION_SET.has(pendingHazardCategory)){
+        const fallbackOpt = document.createElement('option');
+        fallbackOpt.value = pendingHazardCategory;
+        fallbackOpt.textContent = pendingHazardCategory;
+        hazardSelect.appendChild(fallbackOpt);
+      }
+      hazardSelect.value = pendingHazardCategory || '';
+      container.appendChild(hazardSelect);
+
+      hazardSelect.addEventListener('change', () => {
+        pendingHazardCategory = hazardSelect.value;
+        updateTypeHint();
+      });
+
+      const damageLabel = document.createElement('label');
+      const damageSelectId = `cm-damage-${entry.data.id}`;
+      damageLabel.setAttribute('for', damageSelectId);
+      damageLabel.textContent = 'Schadensbild';
+      damageLabel.style.display = 'none';
+      container.appendChild(damageLabel);
+
+      const damageSelect = document.createElement('select');
+      damageSelect.id = damageSelectId;
+      damageSelect.style.display = 'none';
+      damageSelect.disabled = true;
+      damageSelect.tabIndex = -1;
+      const damagePlaceholder = document.createElement('option');
+      damagePlaceholder.value = '';
+      damagePlaceholder.textContent = 'Schadensbild auswählen';
+      damageSelect.appendChild(damagePlaceholder);
+      SCHADEN_DAMAGE_OPTIONS.forEach(labelText => {
+        const opt = document.createElement('option');
+        opt.value = labelText;
+        opt.textContent = labelText;
+        damageSelect.appendChild(opt);
+      });
+      let pendingDamageCategory = typeof entry.data.damageCategory === 'string' ? entry.data.damageCategory : '';
+      if (pendingDamageCategory && !SCHADEN_DAMAGE_OPTION_SET.has(pendingDamageCategory)){
+        const fallbackOpt = document.createElement('option');
+        fallbackOpt.value = pendingDamageCategory;
+        fallbackOpt.textContent = pendingDamageCategory;
+        damageSelect.appendChild(fallbackOpt);
+      }
+      damageSelect.value = pendingDamageCategory || '';
+      container.appendChild(damageSelect);
+
+      damageSelect.addEventListener('change', () => {
+        pendingDamageCategory = damageSelect.value;
+        updateTypeHint();
+      });
+
+      const colorLabel = document.createElement('label');
+      const colorInputId = `cm-color-${entry.data.id}`;
+      colorLabel.setAttribute('for', colorInputId);
+      colorLabel.textContent = 'Farbe des Symbols';
+      container.appendChild(colorLabel);
+
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.id = colorInputId;
+      const colorRow = document.createElement('div');
+      colorRow.className = 'cm-color-row';
+      const colorResetBtn = document.createElement('button');
+      colorResetBtn.type = 'button';
+      colorResetBtn.textContent = 'Standardfarbe';
+      colorResetBtn.className = 'cm-color-reset';
+
+      const customInfo = getMarkerTypeInfo('custom');
+      const defaultCustomColor = sanitizeHexColor(customInfo.color) || '#00FF33';
+      let pendingCustomColor = sanitizeHexColor(entry.data.color) || defaultCustomColor;
+      const currentInfo = getMarkerTypeInfo(currentType);
+      const initialColor = currentType === 'custom'
+        ? pendingCustomColor
+        : (sanitizeHexColor(entry.data.color) || sanitizeHexColor(currentInfo.color) || pendingCustomColor);
+      colorInput.value = (initialColor || '#FFFF00').toLowerCase();
+      colorRow.appendChild(colorInput);
+      colorRow.appendChild(colorResetBtn);
+      container.appendChild(colorRow);
+
+      const nameLabel = document.createElement('label');
+      const nameInputId = `cm-name-${entry.data.id}`;
+      nameLabel.setAttribute('for', nameInputId);
+      nameLabel.textContent = 'Bezeichnung (max. 30 Zeichen)';
+      container.appendChild(nameLabel);
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.id = nameInputId;
+      nameInput.maxLength = 30;
+      nameInput.placeholder = 'z. B. Einsatzpunkt 1';
+      nameInput.value = (entry.data.label || '').slice(0,30);
+      container.appendChild(nameInput);
+
+      const noteLabel = document.createElement('label');
+      const textareaId = `cm-note-${entry.data.id}`;
+      noteLabel.setAttribute('for', textareaId);
+      noteLabel.textContent = 'Notiz';
+      container.appendChild(noteLabel);
+
+      const textarea = document.createElement('textarea');
+      textarea.id = textareaId;
+      textarea.value = entry.data.text || '';
+      textarea.placeholder = 'Text für diesen Marker …';
+      container.appendChild(textarea);
+
+      const tooltipRow = document.createElement('div');
+      tooltipRow.className = 'checkbox-row';
+      const tooltipWrap = document.createElement('div');
+      const tooltipCheckboxId = `cm-tooltip-${entry.data.id}`;
+      const tooltipCheckbox = document.createElement('input');
+      tooltipCheckbox.type = 'checkbox';
+      tooltipCheckbox.id = tooltipCheckboxId;
+      tooltipCheckbox.checked = !!entry.data.showTooltip;
+      const tooltipLabel = document.createElement('label');
+      tooltipLabel.setAttribute('for', tooltipCheckboxId);
+      tooltipLabel.textContent = 'Notiz als Tooltip anzeigen';
+      tooltipWrap.appendChild(tooltipCheckbox);
+      tooltipWrap.appendChild(tooltipLabel);
+      tooltipRow.appendChild(tooltipWrap);
+      container.appendChild(tooltipRow);
+
+      const typeInfoHint = document.createElement('div');
+      typeInfoHint.className = 'hint';
+      container.appendChild(typeInfoHint);
+
+      const coords = document.createElement('div');
+      coords.className = 'hint';
+      const utmStr = escapeHtml(getUTMString(entry.data.lat, entry.data.lng) || '—');
+      const mgrsStr = escapeHtml(getMGRSString(entry.data.lat, entry.data.lng) || '—');
+      coords.innerHTML = `<div><b>UTM:</b> ${utmStr}</div><div><b>MGRS:</b> ${mgrsStr}</div>`;
+      container.appendChild(coords);
+
+      const helper = document.createElement('div');
+      helper.className = 'hint';
+      //helper.textContent = 'Strg+Enter oder Cmd+Enter speichert den Text.';
+      container.appendChild(helper);
+
+      const btnRow = document.createElement('div');
+      btnRow.className = 'btn-row';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.textContent = 'Speichern';
+      btnRow.appendChild(saveBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = 'Marker löschen';
+      deleteBtn.classList.add('danger');
+      btnRow.appendChild(deleteBtn);
+
+      container.appendChild(btnRow);
+
+      const updateTypeSpecificVisibility = () => {
+        const isGefahr = typeSelect.value === 'gefahr';
+        const isSchaden = typeSelect.value === 'schaden';
+        const hazardDisplay = isGefahr ? 'block' : 'none';
+        const damageDisplay = isSchaden ? 'block' : 'none';
+        hazardLabel.style.display = hazardDisplay;
+        hazardSelect.style.display = hazardDisplay;
+        hazardSelect.disabled = !isGefahr;
+        hazardSelect.tabIndex = isGefahr ? 0 : -1;
+        if (isGefahr){
+          hazardSelect.value = pendingHazardCategory || '';
+        }
+        damageLabel.style.display = damageDisplay;
+        damageSelect.style.display = damageDisplay;
+        damageSelect.disabled = !isSchaden;
+        damageSelect.tabIndex = isSchaden ? 0 : -1;
+        if (isSchaden){
+          if (!pendingDamageCategory){
+            pendingDamageCategory = DEFAULT_SCHADEN_CATEGORY;
+          }
+          damageSelect.value = pendingDamageCategory || '';
+        }
+      };
+
+      const updateTypeHint = () => {
+        const selectedType = typeSelect.value;
+        const info = getMarkerTypeInfo(selectedType);
+        const derivedLetter = info.letter || (nameInput.value.trim().charAt(0)?.toUpperCase() || '—');
+        const allowCustomColor = selectedType === 'custom';
+        let effectiveColor;
+
+        if (allowCustomColor){
+          colorInput.value = (pendingCustomColor || '#FFFF00').toLowerCase();
+          const sanitized = sanitizeHexColor(colorInput.value);
+          if (sanitized) pendingCustomColor = sanitized;
+          effectiveColor = pendingCustomColor || '#FFFF00';
+        } else {
+          effectiveColor = sanitizeHexColor(info.color) || '#FFFF00';
+          colorInput.value = effectiveColor.toLowerCase();
+        }
+
+        colorLabel.style.display = allowCustomColor ? 'block' : 'none';
+        colorRow.style.display = allowCustomColor ? 'flex' : 'none';
+        colorResetBtn.disabled = !allowCustomColor;
+        colorInput.disabled = !allowCustomColor;
+        colorInput.tabIndex = allowCustomColor ? 0 : -1;
+
+        updateTypeSpecificVisibility();
+        const hazardValue = selectedType === 'gefahr' ? (hazardSelect.value || '') : '';
+        const hazardInfo = selectedType === 'gefahr'
+          ? `<br><b>Gefahrenlage:</b> ${hazardValue ? escapeHtml(hazardValue) : 'keine Auswahl'}`
+          : '';
+        const damageValue = selectedType === 'schaden' ? (damageSelect.value || '') : '';
+        const damageInfo = selectedType === 'schaden'
+          ? `<br><b>Schadensbild:</b> ${damageValue ? escapeHtml(damageValue) : 'keine Auswahl'}`
+          : '';
+        const colorSample = escapeHtml(effectiveColor);
+        typeInfoHint.innerHTML = `<b>Buchstabe im Marker:</b> ${escapeHtml(derivedLetter)}<br><b>Farbe:</b><span class="cm-type-chip" style="background:${colorSample}"></span> ${colorSample}${hazardInfo}${damageInfo}`;
+      };
+      updateTypeHint();
+
+      const commit = () => {
+        const sanitizedLabel = nameInput.value.trim().slice(0,30);
+        const selType = CUSTOM_MARKER_TYPE_MAP[typeSelect.value] ? typeSelect.value : 'custom';
+        const allowCustomColor = selType === 'custom';
+        const selectedColor = allowCustomColor
+          ? (sanitizeHexColor(colorInput.value) || pendingCustomColor || defaultCustomColor)
+          : '';
+        pendingHazardCategory = hazardSelect.value;
+        pendingDamageCategory = damageSelect.value;
+        entry.data.label = sanitizedLabel;
+        entry.data.text = textarea.value.trim();
+        entry.data.type = selType;
+        entry.data.color = selectedColor;
+        entry.data.showTooltip = tooltipCheckbox.checked;
+        entry.data.hazardCategory = selType === 'gefahr' ? pendingHazardCategory : '';
+        entry.data.damageCategory = selType === 'schaden' ? pendingDamageCategory : '';
+        entry.marker.setIcon(createCustomMarkerIcon(entry.data));
+        updateCustomMarkerTooltip(entry);
+        writeStoredCustomMarkers();
+        updateCustomMarkerHint();
+        entry.marker.closePopup();
+      };
+
+      saveBtn.addEventListener('click', commit);
+      typeSelect.addEventListener('change', () => {
+        pendingHazardCategory = hazardSelect.value;
+        pendingDamageCategory = damageSelect.value;
+        updateTypeHint();
+      });
+      const handleColorChange = () => {
+        const sanitized = sanitizeHexColor(colorInput.value);
+        if (sanitized) pendingCustomColor = sanitized;
+        updateTypeHint();
+      };
+      colorInput.addEventListener('input', handleColorChange);
+      colorInput.addEventListener('change', handleColorChange);
+      colorResetBtn.addEventListener('click', () => {
+        pendingCustomColor = defaultCustomColor;
+        colorInput.value = defaultCustomColor.toLowerCase();
+        updateTypeHint();
+      });
+      nameInput.addEventListener('input', () => {
+        if (nameInput.value.length > 30){
+          nameInput.value = nameInput.value.slice(0,30);
+        }
+        updateTypeHint();
+      });
+      nameInput.addEventListener('keydown', (ev)=>{
+        if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter'){
+          ev.preventDefault();
+          commit();
+        }
+      });
+      textarea.addEventListener('keydown', (ev)=>{
+        if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter'){
+          ev.preventDefault();
+          commit();
+        }
+      });
+      deleteBtn.addEventListener('click', ()=>{
+        entry.marker.closePopup();
+        removeCustomMarker(entry.data.id);
+      });
+
+      return { container, textarea, nameInput, typeSelect, tooltipCheckbox, hazardSelect };
+    }
+
+    function instantiateCustomMarker(record, options = {}){
+      const opts = Object.assign({ openPopup:false, persist:true }, options);
+      const layer = ensureCustomMarkerLayer();
+      if (!layer || !map) return null;
+
+      const typeRaw = typeof record.type === 'string' ? record.type : 'custom';
+      const type = CUSTOM_MARKER_TYPE_MAP[typeRaw] ? typeRaw : 'custom';
+      const data = {
+        id: record.id && String(record.id).trim() ? String(record.id).trim() : makeCustomMarkerId(),
+        lat: Number(record.lat),
+        lng: Number(record.lng),
+        text: typeof record.text === 'string' ? record.text : '',
+        label: typeof record.label === 'string' ? record.label.slice(0,30) : '',
+        type,
+        showTooltip: !!record.showTooltip,
+        color: sanitizeHexColor(record.color) || '',
+        hazardCategory: typeof record.hazardCategory === 'string' ? record.hazardCategory : '',
+        damageCategory: typeof record.damageCategory === 'string' ? record.damageCategory : ''
+      };
+      if (Number.isNaN(data.lat) || Number.isNaN(data.lng)) return null;
+
+      const leafletMarker = L.marker([data.lat, data.lng], { draggable:true, icon: createCustomMarkerIcon(data), autoPan:true });
+      const entry = { data, marker: leafletMarker };
+      customMarkers.set(data.id, entry);
+
+      leafletMarker.bindPopup('', { closeButton:true, autoPan:true, maxWidth:280, className:'custom-marker-popup-wrap' });
+
+      leafletMarker.on('dragend', () => {
+        const pos = leafletMarker.getLatLng();
+        data.lat = pos.lat;
+        data.lng = pos.lng;
+        writeStoredCustomMarkers();
+        updateCustomMarkerHint();
+      });
+
+      leafletMarker.on('popupopen', (evt) => {
+        try{
+          const popup = evt.popup;
+          const { container, textarea, nameInput, typeSelect, tooltipCheckbox } = buildCustomMarkerPopup(entry);
+          popup.setContent(container);
+          setTimeout(()=>{
+            try{
+              if ((entry.data.label || '').trim()){
+                textarea.focus();
+                textarea.select();
+              } else {
+                if (!entry.data.type || entry.data.type === 'custom'){
+                  typeSelect.focus();
+                } else {
+                  nameInput.focus();
+                }
+              }
+            }catch{}
+          }, 0);
+        }catch(err){ console.warn('Custom marker popup init failed', err); }
+      });
+
+      leafletMarker.on('remove', () => {
+        try{ if (leafletMarker.getTooltip()) leafletMarker.unbindTooltip(); }catch{}
+      });
+
+      leafletMarker.addTo(layer);
+
+      updateCustomMarkerTooltip(entry);
+
+      if (opts.persist) writeStoredCustomMarkers();
+      updateCustomMarkerHint();
+
+      if (opts.openPopup){
+        setTimeout(()=> leafletMarker.openPopup(), 0);
+      }
+
+      return entry;
+    }
+
+    function removeCustomMarker(id){
+      const entry = customMarkers.get(id);
+      if (!entry) return;
+      try{
+        if (customMarkerLayer && customMarkerLayer.hasLayer(entry.marker)) customMarkerLayer.removeLayer(entry.marker);
+        else if (map && map.hasLayer(entry.marker)) map.removeLayer(entry.marker);
+      }catch{}
+      customMarkers.delete(id);
+      writeStoredCustomMarkers();
+      updateCustomMarkerHint();
+    }
+
+    function clearCustomMarkers(){
+      if (!customMarkers.size) return;
+      try{
+        if (customMarkerLayer) customMarkerLayer.clearLayers();
+        else if (map){ customMarkers.forEach(entry => { try{ map.removeLayer(entry.marker); }catch{}; }); }
+      }catch{}
+      customMarkers.clear();
+      writeStoredCustomMarkers();
+      updateCustomMarkerHint();
+    }
+
+    function updateCustomMarkerVisibilityButton(){
+      const btn = $('customMarkerVisibility');
+      if (!btn) return;
+      const visible = map && customMarkerLayer ? map.hasLayer(customMarkerLayer) : customMarkerLayerVisible;
+      customMarkerLayerVisible = !!visible;
+      btn.textContent = visible ? 'Marker ausblenden' : 'Marker einblenden';
+    }
+
+    function setCustomMarkerVisibility(visible){
+      visible = !!visible;
+      const layer = ensureCustomMarkerLayer();
+      if (map && layer){
+        if (visible){
+          if (!map.hasLayer(layer)) layer.addTo(map);
+        } else {
+          if (map.hasLayer(layer)) map.removeLayer(layer);
+        }
+      }
+      customMarkerLayerVisible = visible;
+      updateCustomMarkerVisibilityButton();
+    }
+
+    function toggleCustomMarkerVisibility(){
+      const layer = ensureCustomMarkerLayer();
+      const currentlyVisible = map && layer ? map.hasLayer(layer) : customMarkerLayerVisible;
+      setCustomMarkerVisibility(!currentlyVisible);
+    }
+
+    function handleCustomMarkerClick(latlng){
+      instantiateCustomMarker({ lat: latlng.lat, lng: latlng.lng, text: '' }, { openPopup:true, persist:true });
+    }
+
+    function setCustomMarkerMode(active){
+      customMarkerMode = !!active;
+      const toggleBtn = $('customMarkerToggle');
+      if (toggleBtn){
+        toggleBtn.classList.toggle('modeActive', customMarkerMode);
+        toggleBtn.textContent = customMarkerMode ? 'Modus beenden' : 'Marker setzen';
+      }
+      if (customMarkerMode){
+        setCustomMarkerVisibility(true);
+      }
+      updateCustomMarkerHint(customMarkerMode ? 'Modus aktiv – Klick in die Karte legt einen neuen Marker an.' : '');
+      if (customMarkerMode && measureMode !== 'none'){
+        setMode(measureMode);
+      }
+    }
+
+    function toggleCustomMarkerMode(){
+      setCustomMarkerMode(!customMarkerMode);
+    }
+
+    function restoreCustomMarkers(){
+      const stored = readStoredCustomMarkers();
+      if (!stored.length){
+        updateCustomMarkerHint();
+        return;
+      }
+      stored.forEach(rec => instantiateCustomMarker(rec, { persist:false }));
+      updateCustomMarkerHint();
+    }
+
     function onMapClick(e){
+      if (suppressNextMapClick){ suppressNextMapClick = false; return; }
+      // Wenn Einfüge-Vorschau aktiv ist, Map-Click ignorieren (verhindert Doppel-Setzen)
+      if (insertTarget){ hideInsertPreview(); insertTarget = null; return; }
+      if (customMarkerMode){ handleCustomMarkerClick(e.latlng); return; }
       if (measureMode==='none'){
         marker.setLatLng(e.latlng);
         setLatLng(e.latlng.lat, e.latlng.lng, 'map');
@@ -1344,6 +3788,80 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       const hud = $('coordHud');
       if (hud) hud.style.display = on ? 'block' : 'none';
     }
+
+    /* ===== Overlay Zoom-Gate & Checkbox-Sync ===== */
+    function refreshOverlayZoomState(){
+      const z = map.getZoom();
+      // Straßen/POIs ab Zoom 12, THW ab Zoom 11
+
+      const mappingTHW = { olTHW: thwLayer };
+      const mapping12 = { olFW: fwLayer, olHOS: hosLayer, olPOL: polLayer, olSP: spLayer };
+
+      function apply(mapping, minZoom){
+        Object.entries(mapping).forEach(([id,layer])=>{
+          const el = $(id);
+          if (!el) return;
+          const zoomOK = z >= minZoom;
+          el.disabled = !zoomOK;
+          const lbl = document.querySelector(`label[for="${id}"]`);
+          const tip = zoomOK ? '' : `Zoomstufe ≥ ${minZoom}`;
+          el.title = tip; if (lbl) lbl.title = tip;
+          if (!zoomOK){
+            if (layer === thwLayer) setStatusState('THW', null, '');
+            if (map.hasLayer(layer)) {
+              // Soft-Lock: während Ladevorgängen nicht entfernen
+              if (!isLoading()){
+                try{ window.kwZoomSuppressed.add(layer); }catch{};
+                map.removeLayer(layer);
+                try{ layer.clearLayers && layer.clearLayers(); }catch{}
+              }
+            }
+          } else {
+            try{ window.kwZoomSuppressed.delete(layer); }catch{}
+            if (el.checked && !map.hasLayer(layer)) layer.addTo(map);
+          }
+        });
+      }
+
+      apply(mappingTHW, OVERLAY_MIN_Z_THW);
+      apply(mapping12, OVERLAY_MIN_Z);
+      // Hydranten separat (ab Zoom 15)
+      apply({ olHYD: hydClustLayer }, 15);
+
+      // Hydranten-Typ-Checkboxen steuern (enabled nur wenn Hydranten-Checkbox enabled & checked und Zoom >=15)
+      try{
+        const baseEnabled = z >= 15 && !$('olHYD').disabled;
+        const active = baseEnabled && $('olHYD').checked;
+        if (typeof setHydTypeControlsActive === 'function') setHydTypeControlsActive(active);
+      }catch{}
+    }
+
+      // Zusätzliche Absicherung: Sichtbarkeit strikt an Zoom + Haken koppeln
+      function enforceOverlayVisibility(){
+        const z = map.getZoom();
+        const specs = [
+          { id:'olFW',  layer:fwLayer,         min:OVERLAY_MIN_Z },
+          { id:'olTHW', layer:thwLayer,        min:OVERLAY_MIN_Z_THW },
+          { id:'olHOS', layer:hosLayer,        min:OVERLAY_MIN_Z },
+          { id:'olPOL', layer:polLayer,        min:OVERLAY_MIN_Z },
+          { id:'olSP',  layer:spLayer,         min:OVERLAY_MIN_Z },
+          { id:'olHYD', layer:hydClustLayer,   min:15 },
+        ];
+        specs.forEach(({id,layer,min})=>{
+          const el = $(id); if (!el) return;
+          const zoomOK = z >= min;
+          if (!zoomOK && map.hasLayer(layer)) {
+            // Soft-Lock: Layer während laufendem Laden nicht entfernen
+            if (!isLoading()){
+              map.removeLayer(layer);
+              try{ layer.clearLayers && layer.clearLayers(); }catch{}
+            }
+          }
+          if (zoomOK && el.checked && !map.hasLayer(layer)) layer.addTo(map);
+        });
+      }
+
+
 
     /* ===== Sync & Geocoding ===== */
     function setLatLng(lat, lng, src="") {
@@ -1402,34 +3920,28 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       }
     }
     function undoLastMarker(){
-      const removeLast = (arr) => {
-        if (!arr.length) return false;
-        const last = arr.pop();
-        map.removeLayer(last);
+      const removeFrom = (arr, hist) => {
+        if (!hist.length) return false;
+        const last = hist.pop();
+        const idx = arr.indexOf(last);
+        if (idx>-1) arr.splice(idx,1);
+        try{ map.removeLayer(last); }catch{}
         return true;
       };
 
-      let did = false;
-
-      if (measureMode === 'distance'){
-        did = removeLast(distMarkers);
-        if (!did) did = removeLast(areaMarkers);
-      } else if (measureMode === 'area'){
-        did = removeLast(areaMarkers);
-        if (!did) did = removeLast(distMarkers);
+      let did=false;
+      if (measureMode==='distance'){
+        did = removeFrom(distMarkers, distHistory) || removeFrom(areaMarkers, areaHistory);
+      } else if (measureMode==='area'){
+        did = removeFrom(areaMarkers, areaHistory) || removeFrom(distMarkers, distHistory);
       } else {
-        if (distMarkers.length) did = removeLast(distMarkers);
-        else if (areaMarkers.length) did = removeLast(areaMarkers);
+        did = removeFrom(distMarkers, distHistory) || removeFrom(areaMarkers, areaHistory);
       }
-
       if (!did) return;
 
       if (distMarkers.length < 2 && distLine){ map.removeLayer(distLine); distLine = null; }
       if (areaMarkers.length < 1 && areaPoly){ map.removeLayer(areaPoly); areaPoly = null; }
-
-      updateDistance();
-      updateArea();
-      stagedClear = false;
+      updateDistance(); updateArea(); stagedClear=false;
     }
 
     /* ===== MGRS conversions ===== */
@@ -1509,7 +4021,6 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         const mmm  = MONTH_MM[d.getMonth()];
         const jj   = String(d.getFullYear()).slice(-2);
 
-        // Taktische Zeit
         const sTT   = $('tacTT');
         const sHHMM = $('tacHHMM');
         const sMJ   = $('tacMMMJJ');
@@ -1517,7 +4028,6 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         if (sHHMM) sHHMM.textContent = hhmm;
         if (sMJ)   sMJ.textContent  = `${mmm} ${jj}`;
 
-        // Lokale Zeit hh:mm:ss
         const ltHM = $('ltHHMM');
         const ltSS = $('ltSS');
         if (ltHM) ltHM.textContent = `${hh}:${mm}`;
@@ -1529,10 +4039,26 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
 
     /* ===== Init & Events ===== */
     document.addEventListener('DOMContentLoaded', async () => {
+      try{ 
+        const vb = document.getElementById('versionBadge'); 
+        if (vb && typeof APP_VERSION === 'string'){
+          vb.textContent = APP_VERSION;
+          const tip = (typeof APP_DATE==='string' && APP_DATE) ? `Version: ${APP_VERSION} • Stand: ${APP_DATE}` : `Version: ${APP_VERSION}`;
+          vb.title = tip;
+          vb.setAttribute('aria-label', tip);
+        }
+      }catch{}
       const START_LAT = 49.0954122;
       const START_LNG = 8.0038251;
 
       initMap(START_LAT, START_LNG);
+      updateCustomMarkerVisibilityButton();
+
+      storageAvailable = detectStorageAvailability();
+      const customHintEl = $('customMarkerHint');
+      if (customHintEl && !customHintEl.dataset.base){ customHintEl.dataset.base = customHintEl.innerHTML; }
+      restoreCustomMarkers();
+      setCustomMarkerMode(false);
 
       const ok = await mgrsReady.catch(()=>false);
       if (!ok) {
@@ -1546,6 +4072,9 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       }
 
       setLatLng(START_LAT, START_LNG, 'init');
+
+      // Nach Init: Overlay-Zustände gemäß aktuellem Zoom aktualisieren
+      try { refreshOverlayZoomState(); updateOverlayCounts(); } catch {}
 
       // HUD
       $('hudToggle').addEventListener('change', refreshHudVisibility);
@@ -1563,6 +4092,17 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       $('addrCenter').addEventListener('click', () => {
         if (marker && map) { const ll = marker.getLatLng(); map.panTo(ll, { animate:true }); }
       });
+
+      // Overlay-Checkboxen → Live-HUD sofort aktualisieren
+      try{
+        const ovRow = document.getElementById('overlayRow');
+        if (ovRow){
+          const upd = ()=>{ try{ updateOverlayCounts(); }catch{} };
+          ovRow.addEventListener('change', upd);
+          ovRow.addEventListener('input', upd);
+          ovRow.addEventListener('click', upd);
+        }
+      }catch{}
 
       // DD
       $('lat').addEventListener('input', ()=> {
@@ -1604,6 +4144,7 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       }
       ['mgrsZoneBand','mgrs100k','mgrsE','mgrsN'].forEach(id=> $(id).addEventListener('input', updateFromMGRSInputsSafe));
 
+      
       // Copy
       $('copyUtm').addEventListener('click', (e)=>copyById('utmString', e.currentTarget));
       $('copyMgrs').addEventListener('click', (e)=>copyById('mgrsString', e.currentTarget));
@@ -1614,9 +4155,40 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       $('measureClear').addEventListener('click', (e)=>{ e.preventDefault(); clearMeasureSmart(); });
       $('measureUndo').addEventListener('click', (e)=>{ e.preventDefault(); undoLastMarker(); });
 
+      const markerToggleBtn = $('customMarkerToggle');
+      if (markerToggleBtn){
+        markerToggleBtn.addEventListener('click', (e)=>{ e.preventDefault(); toggleCustomMarkerMode(); });
+      }
+      const markerVisibilityBtn = $('customMarkerVisibility');
+      if (markerVisibilityBtn){
+        markerVisibilityBtn.addEventListener('click', (e)=>{ e.preventDefault(); toggleCustomMarkerVisibility(); });
+      }
+      const markerClearBtn = $('customMarkerClear');
+      if (markerClearBtn){
+        markerClearBtn.addEventListener('click', async (e)=>{
+          e.preventDefault();
+          if (!customMarkers.size) return;
+          const confirmed = await showKwConfirm({
+            title: 'Alle Marker löschen?',
+            message: 'Alle eigenen Marker werden dauerhaft entfernt. Dieser Schritt kann nicht rückgängig gemacht werden.',
+            confirmLabel: 'Alles löschen',
+            cancelLabel: 'Abbrechen',
+            danger: true
+          });
+          if (confirmed){
+            clearCustomMarkers();
+          }
+        });
+      }
+      updateCustomMarkerVisibilityButton();
+
       // ESC beendet Messung
       document.addEventListener('keydown', (e)=>{
         if (e.key === 'Escape'){
+          if (customMarkerMode){
+            setCustomMarkerMode(false);
+            return;
+          }
           if (measureMode!=='none'){ setMode(measureMode); }
         }
       });
@@ -1627,15 +4199,107 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
       $('gridLabelsChk').addEventListener('change', redrawGridNow);
       const pickerLine = $('gridColor');
       const pickerLbl  = $('gridLabelColor');
-      pickerLine.addEventListener('input', (e)=>{ document.documentElement.style.setProperty('--grid', e.target.value); redrawGridNow(); });
-      pickerLbl.addEventListener('input', (e)=>{ document.documentElement.style.setProperty('--grid-label', e.target.value); redrawGridNow(); });
-      $('gridAutoContrast').addEventListener('change', ()=>{ refreshGridOptionsVisibility(); maybeApplyAutoContrast(); redrawGridNow(); });
 
-      // initial
-      refreshGridOptionsVisibility();
-      maybeApplyAutoContrast();
-      enforceGridMinScale();
-      updateGrid();
+      pickerLine.addEventListener('input', (e)=>{ document.documentElement.style.setProperty('--grid', e.target.value); redrawGridNow(); });
+      pickerLbl.addEventListener('input',  (e)=>{ document.documentElement.style.setProperty('--grid-label', e.target.value); redrawGridNow(); });
+      function cssColorToHex(str){
+        if (!str) return '';
+        const s = String(str).trim();
+        if (s[0] === '#') return s.toLowerCase();
+        const m = s.match(/^rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+        if (!m) return '';
+        const r = Math.max(0,Math.min(255,parseInt(m[1],10)));
+        const g = Math.max(0,Math.min(255,parseInt(m[2],10)));
+        const b = Math.max(0,Math.min(255,parseInt(m[3],10)));
+        const toHex = (n)=> ('0'+n.toString(16)).slice(-2);
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+      }
+
+      $('gridAutoContrast').addEventListener('change', ()=>{
+        refreshGridOptionsVisibility();
+        maybeApplyAutoContrast();
+        try{
+          let gv = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim() || '#ff0000';
+          let lv = getComputedStyle(document.documentElement).getPropertyValue('--grid-label').trim() || '#0000a0';
+          gv = cssColorToHex(gv) || '#ff0000';
+          lv = cssColorToHex(lv) || '#0000a0';
+          if (pickerLine) pickerLine.value = gv;
+          if (pickerLbl)  pickerLbl.value  = lv;
+        }catch{}
+        redrawGridNow();
+      });
+
+      // Overlay-Checkboxen koppeln
+  function syncCheckboxToLayer(chkId, layer, minZoom = OVERLAY_MIN_Z){
+  const el = $(chkId);
+  if (!el) return;
+  const apply = () => {
+    const want = el.checked;
+    const has  = map.hasLayer(layer);
+    const zoomOK = map.getZoom() >= minZoom;
+    // Checkbox aktivierbar je nach Zoom, Tooltip sowohl am Input als auch am Label
+    el.disabled = !zoomOK;
+    const lbl = document.querySelector(`label[for="${chkId}"]`);
+    const tip = zoomOK ? '' : `Zoomstufe ≥ ${minZoom}`;
+    el.title = tip; if (lbl) lbl.title = tip;
+    if (!want && has) { map.removeLayer(layer); }
+    if (want && !has && zoomOK) { layer.addTo(map); }
+    // Straßen-Badges entfernt
+    // Nicht-Straßen: sofort laden bei Aktivierung
+    if (want && zoomOK){
+      try{
+        if (layer===fwLayer)  loadFW({immediate:true});
+        else if (layer===thwLayer) loadTHW({immediate:true});
+        else if (layer===hosLayer) loadHOS({immediate:true});
+        else if (layer===polLayer) loadPOL({immediate:true});
+        else if (layer===spLayer)  loadSP({immediate:true});
+        else if (layer===hydClustLayer) { applyHydFilter(); }
+      }catch{}
+    }
+    if (chkId === 'olHYD'){
+      const zOk = map.getZoom() >= 15;
+      if (!zOk){
+        // Zu niedriger Zoom: sicher deaktivieren und UI verstecken
+        if (el.checked) el.checked = false;
+        if (typeof setHydTypeControlsActive==='function') setHydTypeControlsActive(false);
+        return;
+      }
+      if (el.checked){
+        if (typeof setHydTypeControlsActive==='function') setHydTypeControlsActive(true);
+        try{ updateHydTypeCounts(); }catch{}
+        try{ applyHydFilter(); }catch{}
+      } else {
+        // Bei Deaktivierung: Filterzeile ausblenden
+        if (typeof setHydTypeControlsActive==='function') setHydTypeControlsActive(false);
+      }
+    }
+    try{ updateOverlayCounts(); }catch{}
+  };
+  el.addEventListener('change', apply);
+  el.addEventListener('input', apply);
+  el.addEventListener('click', apply);
+  apply(); try{ updateOverlayCounts(); }catch{}
+}
+
+// ... Aufrufe:
+// Straßen-Badges entfernt
+syncCheckboxToLayer('olFW', fwLayer);
+syncCheckboxToLayer('olTHW', thwLayer, OVERLAY_MIN_Z_THW);
+syncCheckboxToLayer('olHOS', hosLayer);
+syncCheckboxToLayer('olPOL', polLayer);
+syncCheckboxToLayer('olSP',  spLayer);
+syncCheckboxToLayer('olHYD', hydClustLayer, 15);
+
+      // Hydranten-Typfilter entfernt – keine Events mehr nötig
+
+      // Fallback: direkte Kopplung der Typ-Controls an die Hydranten-Checkbox (zusätzlich zur Sync-Funktion)
+      const hydMain = $('olHYD');
+      if (hydMain) {
+        const applyHydCtl = ()=>{ const zOk = map.getZoom()>=15; if (typeof setHydTypeControlsActive==='function') setHydTypeControlsActive(zOk && hydMain.checked); };
+        hydMain.addEventListener('change', applyHydCtl);
+        hydMain.addEventListener('input', applyHydCtl);
+        applyHydCtl();
+      }
 
       /* Panel-Toggle mit Map-Resize */
       const panel  = $('leftPanel');
@@ -1647,7 +4311,6 @@ header.brand h1{ font-size: clamp(18px, 2.3vw, 20px); }
         document.body.classList.toggle('panel-collapsed', collapsed);
         localStorage.setItem('kw_panel_collapsed', collapsed ? '1' : '0');
 
-        // Mehrfach invalidieren (vor, während, nach der Transition)
         invalidateMapSafely();
         setTimeout(invalidateMapSafely, 60);
         const onEnd = (e) => {

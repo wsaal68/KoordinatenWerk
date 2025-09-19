@@ -14,6 +14,7 @@ KoordinatenWerk ist ein webbasiertes Tool zur Umrechnung und Anzeige von geograf
 - **Raster:** UTM/MGRS-Gitter mit konfigurierbaren Farben und Labels
 - **Messfunktionen:** Strecken- und Flächenmessung direkt in der Karte
 - **Kopierfunktion:** Koordinaten einfach kopieren
+- **Marker:** Eigene Marker in die Karte setzen
 - **Responsive Design:** Optimiert für Desktop und Mobilgeräte
 
 ## Installation
