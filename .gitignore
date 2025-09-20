@@ -426,3 +426,10 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# System-Dateien
+Thumbs.db
+ehthumbs.db
+
+# macOS-spezifische Dateien
+.DS_Store
