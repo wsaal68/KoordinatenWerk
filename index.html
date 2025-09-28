@@ -6,8 +6,8 @@
 <title>KoordinatenWerk</title>
 
 <script>
-const APP_VERSION = 'v3.3.3';
-const APP_DATE    = '2025-09-19';
+const APP_VERSION = 'v3.3.4';
+const APP_DATE    = '2025-09-29';
 </script>
 
 
@@ -202,6 +202,66 @@ const APP_DATE    = '2025-09-19';
   }
   .copybtn.copied{ outline:2px solid var(--brand); }
   .copybtn svg{ width:16px; height:16px; stroke: var(--brand); fill:none; stroke-width:2; }
+  .copy-notice{
+    margin-top:4px;
+    font-size:12px;
+    color:var(--brand);
+    display:none;
+  }
+  .copy-notice.visible{ display:block; }
+  .custom-marker-popup .cm-coord-display{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:12px;
+    color:#c9d3e0;
+  }
+  .custom-marker-popup .cm-coord-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .custom-marker-popup .cm-coord-row b{
+    flex:0 0 auto;
+  }
+  .custom-marker-popup .cm-coord-value{
+    flex:1;
+    white-space:nowrap;
+  }
+  .custom-marker-popup .cm-copy-btn{
+    background:transparent;
+    border:none;
+    color:var(--brand);
+    cursor:pointer;
+    padding:0;
+    width:16px;
+    height:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:4px;
+    transition: background-color .15s ease, transform .12s ease;
+  }
+  .custom-marker-popup .cm-copy-btn:hover:not(:disabled){
+    background:rgba(158,193,255,0.12);
+    transform:translateY(-1px);
+  }
+  .custom-marker-popup .cm-copy-btn:active:not(:disabled){
+    transform:translateY(0);
+  }
+  .custom-marker-popup .cm-copy-btn:disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+    transform:none;
+    background:transparent;
+  }
+  .custom-marker-popup .cm-copy-btn svg{
+    width:10px;
+    height:10px;
+    stroke:currentColor;
+    fill:none;
+    stroke-width:2;
+  }
   #customMarkerHint{ margin-top:10px; }
   .custom-marker-popup{ display:flex; flex-direction:column; gap:8px; width:220px; }
   .custom-marker-popup select,
@@ -210,6 +270,28 @@ const APP_DATE    = '2025-09-19';
     width:100%;
     background:#111827; color:#e6efff; border:1px solid #3a4354; border-radius:6px;
     padding:6px; font:13px/1.35 Arial,sans-serif;
+  }
+  .custom-marker-popup .cm-coord-section{
+    margin-top:6px;
+    padding-top:6px;
+    border-top:1px solid rgba(58,67,84,0.6);
+  }
+  .custom-marker-popup .cm-coord-toggle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .custom-marker-popup .cm-coord-toggle label{
+    white-space:normal;
+  }
+  .custom-marker-popup .cm-coord-edit{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-top:6px;
+  }
+  .custom-marker-popup .cm-coord-edit input[type="text"]{
+    background:#0f1622;
   }
   .custom-marker-popup .cm-color-row{
     display:flex;
@@ -364,6 +446,24 @@ const APP_DATE    = '2025-09-19';
   }
   .custom-marker-popup button.danger:hover{
     background:#3a1f2d;
+  }
+  .custom-marker-popup button.cm-copy-btn{
+    flex:0 0 auto;
+    padding:0;
+    min-height:0;
+    width:18px;
+    height:18px;
+    border:none;
+    background:transparent;
+    color:var(--brand);
+    box-shadow:none;
+  }
+  .custom-marker-popup button.cm-copy-btn:hover{
+    background:rgba(158,193,255,0.12);
+    box-shadow:none;
+  }
+  .custom-marker-popup button.cm-copy-btn:active{
+    box-shadow:none;
   }
   .custom-marker-tooltip{
     background:rgba(15,22,34,.92); color:#f5f8ff;
@@ -699,7 +799,9 @@ const APP_DATE    = '2025-09-19';
     color:var(--brand);
   }
 </style>
-</head>
+<!-- Code injected by Five-server -->
+  <script async data-id="five-server" data-file="/Volumes/SSD/repos/KoordinatenWerk/index.html" type="application/javascript" src="/fiveserver.js"></script>
+  </head>
 <body>
 
   <div class="panel" id="leftPanel">
@@ -872,13 +974,14 @@ const APP_DATE    = '2025-09-19';
         <label for="utmString">UTM Koordinate</label>
         <div class="copyrow">
           <input id="utmString" class="wch" style="--ch:50" type="text" readonly />
-          <button id="copyUtm" type="button" class="copybtn" title="UTM kopieren" aria-label="UTM kopieren">
+          <button id="copyUtm" type="button" class="copybtn" title="UTM kopieren" aria-label="UTM kopieren" data-notice="utmCopyNotice">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <rect x="9" y="3" width="11" height="14" rx="2"></rect>
               <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
             </svg>
           </button>
         </div>
+        <div id="utmCopyNotice" class="copy-notice" role="status" aria-live="polite"></div>
       </div>
     </div>
 
@@ -908,13 +1011,14 @@ const APP_DATE    = '2025-09-19';
           <label for="mgrsString">MGRS Koordinate</label>
           <input id="mgrsString" class="wch" style="--ch:34" type="text" readonly />
         </div>
-        <button id="copyMgrs" type="button" class="copybtn" title="MGRS kopieren" aria-label="MGRS kopieren">
+        <button id="copyMgrs" type="button" class="copybtn" title="MGRS kopieren" aria-label="MGRS kopieren" data-notice="mgrsCopyNotice">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <rect x="9" y="3" width="11" height="14" rx="2"></rect>
             <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
           </svg>
         </button>
       </div>
+      <div id="mgrsCopyNotice" class="copy-notice" role="status" aria-live="polite"></div>
       <div id="mgrsWarn" class="warn" style="display:none"></div>
     </div>
 
@@ -3255,6 +3359,118 @@ const APP_DATE    = '2025-09-19';
       }catch(err){ console.warn('Tooltip update fehlgeschlagen', err); }
     }
 
+    function gzdBandToHemisphere(band){
+      const letter = String(band || '').trim().toUpperCase();
+      if (!letter) return '';
+      if (!/^[C-HJ-NP-X]$/.test(letter)) return '';
+      return letter >= 'N' ? 'N' : 'S';
+    }
+
+    function parseCustomMarkerUTMString(input){
+      const raw = String(input || '').toUpperCase().replace(/\s+/g, ' ').trim();
+      if (!raw) return null;
+      const match = raw.match(/^(\d{1,2})([C-HJ-NP-X]?)(?:\s+([C-HJ-NP-X]))?\s+(\d{1,7})\s+(\d{1,8})$/);
+      if (!match) return null;
+      const zone = Number(match[1]);
+      const band = (match[2] || match[3] || '').toUpperCase();
+      const easting = Number(match[4]);
+      const northing = Number(match[5]);
+      if (!Number.isInteger(zone) || zone < 1 || zone > 60) return null;
+      if (!Number.isFinite(easting) || easting < 100000 || easting > 900000) return null;
+      if (!Number.isFinite(northing) || northing < 0 || northing > 10000000) return null;
+      const hemisphere = gzdBandToHemisphere(band);
+      if (!hemisphere) return null;
+      return { zone, band, easting, northing, hemisphere };
+    }
+
+    function utmParsedToLatLng(parsed){
+      if (!parsed) return null;
+      try{
+        const utmDef = utmProjString(parsed.zone, parsed.hemisphere);
+        const [lon, lat] = proj4(utmDef, 'EPSG:4326', [parsed.easting, parsed.northing]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+        return { lat, lng: lon };
+      }catch(err){
+        console.warn('UTM to lat/lng failed', err, parsed);
+        return null;
+      }
+    }
+
+    function parseCustomMarkerMGRSString(input){
+      if (typeof mgrs !== 'object') return null;
+      const raw = String(input || '').trim();
+      if (!raw) return null;
+      const compact = raw.toUpperCase().replace(/[^0-9A-Z]/g, '');
+      if (compact.length < 7) return null;
+      const candidates = [compact, raw.toUpperCase().replace(/\s+/g, ' ').trim()];
+      for (const cand of candidates){
+        if (!cand) continue;
+        try{
+          const [lon, lat] = mgrs.toPoint(cand);
+          if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lng: lon };
+        }catch(err){
+          // try next candidate
+        }
+      }
+      return null;
+    }
+
+    function updateCustomMarkerPopupCoords(entry, opts = {}){
+      if (!entry) return;
+      const popup = entry.marker?.getPopup?.();
+      let root = opts.root;
+      if (!root){
+        const content = popup?.getContent?.();
+        if (content && typeof content.querySelector === 'function') root = content;
+      }
+      if (!root || typeof root.querySelector !== 'function') return;
+      const utmStr = getUTMString(entry.data.lat, entry.data.lng) || '—';
+      const mgrsStr = getMGRSString(entry.data.lat, entry.data.lng) || '—';
+      const utmValueEl = root.querySelector('[data-role="cm-utm-display"]');
+      if (utmValueEl){ utmValueEl.textContent = utmStr || '—'; }
+      const mgrsValueEl = root.querySelector('[data-role="cm-mgrs-display"]');
+      if (mgrsValueEl){ mgrsValueEl.textContent = mgrsStr || '—'; }
+      const utmCopyBtn = root.querySelector('[data-role="cm-utm-copy"]');
+      if (utmCopyBtn){
+        const value = utmStr && utmStr !== '—' ? utmStr : '';
+        utmCopyBtn.dataset.copyValue = value;
+        utmCopyBtn.disabled = !value;
+      }
+      const mgrsCopyBtn = root.querySelector('[data-role="cm-mgrs-copy"]');
+      if (mgrsCopyBtn){
+        const value = mgrsStr && mgrsStr !== '—' ? mgrsStr : '';
+        mgrsCopyBtn.dataset.copyValue = value;
+        mgrsCopyBtn.disabled = !value;
+      }
+      const utmInput = root.querySelector('[data-role="cm-utm-input"]');
+      if (utmInput){
+        const formatted = utmStr === '—' ? '' : utmStr;
+        if (utmInput.value !== formatted) utmInput.value = formatted;
+      }
+      const mgrsInput = root.querySelector('[data-role="cm-mgrs-input"]');
+      if (mgrsInput){
+        const formatted = mgrsStr === '—' ? '' : mgrsStr;
+        if (mgrsInput.value !== formatted) mgrsInput.value = formatted;
+        mgrsInput.disabled = typeof mgrs !== 'object';
+      }
+      const errEl = root.querySelector('[data-role="cm-coord-error"]');
+      if (errEl && !errEl.textContent.trim()) errEl.style.display = 'none';
+    }
+
+    function setCustomMarkerLatLng(entry, lat, lng, source = 'manual'){
+      if (!entry || !entry.marker) return;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      entry.data.lat = lat;
+      entry.data.lng = lng;
+      if (source !== 'drag'){
+        try{ entry.marker.setLatLng([lat, lng]); }
+        catch(err){ console.warn('Marker reposition failed', err); }
+      }
+      writeStoredCustomMarkers();
+      updateCustomMarkerHint();
+      updateCustomMarkerPopupCoords(entry);
+    }
+
     function updateCustomMarkerHint(extra){
       const hint = $('customMarkerHint');
       if (!hint) return;
@@ -3442,12 +3658,251 @@ const APP_DATE    = '2025-09-19';
       typeInfoHint.className = 'hint';
       container.appendChild(typeInfoHint);
 
-      const coords = document.createElement('div');
-      coords.className = 'hint';
-      const utmStr = escapeHtml(getUTMString(entry.data.lat, entry.data.lng) || '—');
-      const mgrsStr = escapeHtml(getMGRSString(entry.data.lat, entry.data.lng) || '—');
-      coords.innerHTML = `<div><b>UTM:</b> ${utmStr}</div><div><b>MGRS:</b> ${mgrsStr}</div>`;
-      container.appendChild(coords);
+      const coordSection = document.createElement('div');
+      coordSection.className = 'cm-coord-section';
+
+      const coordToggle = document.createElement('div');
+      coordToggle.className = 'cm-coord-toggle';
+      const coordCheckboxId = `cm-coord-${entry.data.id}`;
+      const coordCheckbox = document.createElement('input');
+      coordCheckbox.type = 'checkbox';
+      coordCheckbox.id = coordCheckboxId;
+      coordCheckbox.dataset.role = 'cm-coord-checkbox';
+      const coordLabel = document.createElement('label');
+      coordLabel.setAttribute('for', coordCheckboxId);
+      coordLabel.textContent = 'Marker auf Koordinate setzen';
+      coordToggle.appendChild(coordCheckbox);
+      coordToggle.appendChild(coordLabel);
+      coordSection.appendChild(coordToggle);
+
+      const coordsDisplay = document.createElement('div');
+      coordsDisplay.className = 'cm-coord-display hint';
+      coordsDisplay.dataset.role = 'cm-coords-display';
+
+      const coordNoticeId = `cm-copy-notice-${entry.data.id}`;
+
+      const utmRow = document.createElement('div');
+      utmRow.className = 'cm-coord-row';
+      const utmLabelEl = document.createElement('b');
+      utmLabelEl.textContent = 'UTM:';
+      utmRow.appendChild(utmLabelEl);
+      const utmValueEl = document.createElement('span');
+      utmValueEl.className = 'cm-coord-value';
+      utmValueEl.dataset.role = 'cm-utm-display';
+      utmRow.appendChild(utmValueEl);
+      const utmCopyBtn = document.createElement('button');
+      utmCopyBtn.type = 'button';
+      utmCopyBtn.className = 'cm-copy-btn';
+      utmCopyBtn.dataset.role = 'cm-utm-copy';
+      utmCopyBtn.dataset.notice = coordNoticeId;
+      utmCopyBtn.setAttribute('aria-label', 'UTM kopieren');
+      utmCopyBtn.title = 'UTM kopieren';
+      utmCopyBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="11" height="14" rx="2"></rect><path d="M5 7v12a2 2 0 0 0 2 2h9"></path></svg>';
+      utmCopyBtn.addEventListener('click', () => {
+        const value = utmCopyBtn.dataset.copyValue || '';
+        if (!value) return;
+        copyText(value, utmCopyBtn);
+      });
+      utmRow.appendChild(utmCopyBtn);
+      coordsDisplay.appendChild(utmRow);
+
+      const mgrsRow = document.createElement('div');
+      mgrsRow.className = 'cm-coord-row';
+      const mgrsLabelEl = document.createElement('b');
+      mgrsLabelEl.textContent = 'MGRS:';
+      mgrsRow.appendChild(mgrsLabelEl);
+      const mgrsValueEl = document.createElement('span');
+      mgrsValueEl.className = 'cm-coord-value';
+      mgrsValueEl.dataset.role = 'cm-mgrs-display';
+      mgrsRow.appendChild(mgrsValueEl);
+      const mgrsCopyBtn = document.createElement('button');
+      mgrsCopyBtn.type = 'button';
+      mgrsCopyBtn.className = 'cm-copy-btn';
+      mgrsCopyBtn.dataset.role = 'cm-mgrs-copy';
+      mgrsCopyBtn.dataset.notice = coordNoticeId;
+      mgrsCopyBtn.setAttribute('aria-label', 'MGRS kopieren');
+      mgrsCopyBtn.title = 'MGRS kopieren';
+      mgrsCopyBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="11" height="14" rx="2"></rect><path d="M5 7v12a2 2 0 0 0 2 2h9"></path></svg>';
+      mgrsCopyBtn.addEventListener('click', () => {
+        const value = mgrsCopyBtn.dataset.copyValue || '';
+        if (!value) return;
+        copyText(value, mgrsCopyBtn);
+      });
+      mgrsRow.appendChild(mgrsCopyBtn);
+      coordsDisplay.appendChild(mgrsRow);
+
+      coordSection.appendChild(coordsDisplay);
+
+      const coordNotice = document.createElement('div');
+      coordNotice.id = coordNoticeId;
+      coordNotice.className = 'copy-notice';
+      coordNotice.setAttribute('role', 'status');
+      coordNotice.setAttribute('aria-live', 'polite');
+      coordSection.appendChild(coordNotice);
+
+      const coordsEditWrap = document.createElement('div');
+      coordsEditWrap.className = 'cm-coord-edit';
+      coordsEditWrap.style.display = 'none';
+
+      const utmLabel = document.createElement('label');
+      const utmInputId = `cm-utm-${entry.data.id}`;
+      utmLabel.setAttribute('for', utmInputId);
+      utmLabel.textContent = 'UTM';
+      coordsEditWrap.appendChild(utmLabel);
+
+      const utmInput = document.createElement('input');
+      utmInput.type = 'text';
+      utmInput.id = utmInputId;
+      utmInput.placeholder = 'z. B. 32U 448933 5412345';
+      utmInput.dataset.role = 'cm-utm-input';
+      utmInput.autocomplete = 'off';
+      coordsEditWrap.appendChild(utmInput);
+
+      const mgrsLabel = document.createElement('label');
+      const mgrsInputId = `cm-mgrs-${entry.data.id}`;
+      mgrsLabel.setAttribute('for', mgrsInputId);
+      mgrsLabel.textContent = 'MGRS';
+      coordsEditWrap.appendChild(mgrsLabel);
+
+      const mgrsInput = document.createElement('input');
+      mgrsInput.type = 'text';
+      mgrsInput.id = mgrsInputId;
+      mgrsInput.placeholder = 'z. B. 32U NV 12345 67890';
+      mgrsInput.dataset.role = 'cm-mgrs-input';
+      mgrsInput.autocomplete = 'off';
+      coordsEditWrap.appendChild(mgrsInput);
+
+      const coordError = document.createElement('div');
+      coordError.className = 'warn';
+      coordError.style.display = 'none';
+      coordError.dataset.role = 'cm-coord-error';
+      coordsEditWrap.appendChild(coordError);
+
+      coordSection.appendChild(coordsEditWrap);
+      container.appendChild(coordSection);
+
+      const setCoordError = (msg) => {
+        coordError.textContent = msg || '';
+        coordError.style.display = msg ? 'block' : 'none';
+      };
+      const clearCoordError = () => setCoordError('');
+
+      const ensureMgrsInputState = () => {
+        if (typeof mgrs !== 'object'){
+          mgrsInput.disabled = true;
+          mgrsInput.placeholder = 'MGRS wird geladen …';
+          if (mgrsReady && typeof mgrsReady.then === 'function'){
+            mgrsReady.then(() => {
+              if (typeof mgrs === 'object'){
+                mgrsInput.disabled = false;
+                mgrsInput.placeholder = 'z. B. 32U NV 12345 67890';
+                if (coordCheckbox.checked){
+                  updateCustomMarkerPopupCoords(entry, { root: container });
+                }
+              }
+            }).catch(()=>{
+              mgrsInput.placeholder = 'MGRS nicht verfügbar';
+            });
+          }
+        } else {
+          mgrsInput.disabled = false;
+          mgrsInput.placeholder = 'z. B. 32U NV 12345 67890';
+        }
+      };
+
+      let isSyncingCoords = false;
+
+      const toggleCoordEditing = (active) => {
+        const enabled = !!active;
+        coordCheckbox.checked = enabled;
+        coordsDisplay.style.display = enabled ? 'none' : 'block';
+        coordsEditWrap.style.display = enabled ? 'flex' : 'none';
+        if (enabled){
+          if (coordNotice){
+            if (coordNotice._copyTimer){ clearTimeout(coordNotice._copyTimer); coordNotice._copyTimer = null; }
+            coordNotice.classList.remove('visible');
+            coordNotice.textContent = '';
+          }
+          ensureMgrsInputState();
+          clearCoordError();
+          updateCustomMarkerPopupCoords(entry, { root: container });
+          setTimeout(()=>{ try{ utmInput.focus(); utmInput.select(); }catch{} }, 0);
+        } else {
+          clearCoordError();
+        }
+      };
+
+      coordCheckbox.addEventListener('change', () => toggleCoordEditing(coordCheckbox.checked));
+
+      const handleUtmUpdate = (force=false) => {
+        if (!coordCheckbox.checked || isSyncingCoords) return;
+        if (!force) clearCoordError();
+        const parsed = parseCustomMarkerUTMString(utmInput.value);
+        if (!parsed){
+          if (force) setCoordError('UTM-Eingabe unvollständig oder ungültig.');
+          return;
+        }
+        const latLng = utmParsedToLatLng(parsed);
+        if (!latLng){
+          if (force) setCoordError('UTM-Koordinate konnte nicht umgerechnet werden.');
+          return;
+        }
+        isSyncingCoords = true;
+        try{
+          clearCoordError();
+          setCustomMarkerLatLng(entry, latLng.lat, latLng.lng, 'utm-input');
+          updateCustomMarkerPopupCoords(entry, { root: container });
+        } finally {
+          isSyncingCoords = false;
+        }
+      };
+
+      const handleMgrsUpdate = (force=false) => {
+        if (!coordCheckbox.checked || isSyncingCoords) return;
+        if (!force) clearCoordError();
+        if (typeof mgrs !== 'object'){
+          setCoordError('MGRS-Umrechnung nicht verfügbar.');
+          return;
+        }
+        const latLng = parseCustomMarkerMGRSString(mgrsInput.value);
+        if (!latLng){
+          if (force) setCoordError('MGRS-Eingabe unvollständig oder ungültig.');
+          return;
+        }
+        isSyncingCoords = true;
+        try{
+          clearCoordError();
+          setCustomMarkerLatLng(entry, latLng.lat, latLng.lng, 'mgrs-input');
+          updateCustomMarkerPopupCoords(entry, { root: container });
+        } finally {
+          isSyncingCoords = false;
+        }
+      };
+
+      utmInput.addEventListener('input', () => handleUtmUpdate(false));
+      utmInput.addEventListener('change', () => handleUtmUpdate(true));
+      utmInput.addEventListener('blur', () => handleUtmUpdate(true));
+      utmInput.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter'){ ev.preventDefault(); handleUtmUpdate(true); }
+      });
+
+      mgrsInput.addEventListener('input', () => handleMgrsUpdate(false));
+      mgrsInput.addEventListener('change', () => handleMgrsUpdate(true));
+      mgrsInput.addEventListener('blur', () => handleMgrsUpdate(true));
+      mgrsInput.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter'){ ev.preventDefault(); handleMgrsUpdate(true); }
+      });
+
+      updateCustomMarkerPopupCoords(entry, { root: container });
+
+      if (mgrsReady && typeof mgrsReady.then === 'function'){
+        mgrsReady.then(() => {
+          if (coordCheckbox.checked){
+            ensureMgrsInputState();
+            updateCustomMarkerPopupCoords(entry, { root: container });
+          }
+        }).catch(()=>{});
+      }
 
       const helper = document.createElement('div');
       helper.className = 'hint';
@@ -3627,10 +4082,7 @@ const APP_DATE    = '2025-09-19';
 
       leafletMarker.on('dragend', () => {
         const pos = leafletMarker.getLatLng();
-        data.lat = pos.lat;
-        data.lng = pos.lng;
-        writeStoredCustomMarkers();
-        updateCustomMarkerHint();
+        setCustomMarkerLatLng(entry, pos.lat, pos.lng, 'drag');
       });
 
       leafletMarker.on('popupopen', (evt) => {
@@ -3906,18 +4358,82 @@ const APP_DATE    = '2025-09-19';
     }
 
     /* ===== Copy & Undo ===== */
+    function showCopyNotice(btn){
+      if (!btn) return;
+      const noticeId = btn.dataset?.notice;
+      if (!noticeId) return;
+      const notice = document.getElementById(noticeId);
+      if (!notice) return;
+      notice.textContent = 'Koordinate kopiert';
+      notice.classList.add('visible');
+      if (notice._copyTimer){ clearTimeout(notice._copyTimer); }
+      notice._copyTimer = setTimeout(() => {
+        notice.classList.remove('visible');
+        notice.textContent = '';
+        notice._copyTimer = null;
+      }, 1500);
+    }
+
+    function performCopy(text, btn, fallbackEl){
+      const value = typeof text === 'string' ? text : String(text ?? '');
+      if (!value) return;
+      const afterCopy = () => {
+        if (btn){
+          btn.classList.add('copied');
+          setTimeout(()=>{ btn.classList.remove('copied'); }, 900);
+        }
+        showCopyNotice(btn);
+      };
+      const fallbackCopy = () => {
+        if (fallbackEl && typeof fallbackEl.select === 'function'){
+          try {
+            fallbackEl.select();
+            if (document.execCommand){ document.execCommand('copy'); }
+            fallbackEl.blur?.();
+            afterCopy();
+          } catch (err) {
+            console.warn('Fallback copy failed', err);
+          }
+          return;
+        }
+        const temp = document.createElement('textarea');
+        temp.value = value;
+        temp.setAttribute('readonly', '');
+        temp.style.position = 'fixed';
+        temp.style.opacity = '0';
+        temp.style.pointerEvents = 'none';
+        document.body.appendChild(temp);
+        temp.select();
+        try {
+          if (document.execCommand){ document.execCommand('copy'); }
+          afterCopy();
+        } catch(err){
+          console.warn('Temporary copy failed', err);
+        } finally {
+          temp.remove();
+        }
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(value)
+          .then(afterCopy)
+          .catch(err => {
+            console.warn('Clipboard write failed', err);
+            fallbackCopy();
+          });
+      } else {
+        fallbackCopy();
+      }
+    }
+
     function copyById(id, btn){
       const el = document.getElementById(id);
       const txt = (el && 'value' in el) ? el.value : '';
       if (!txt) return;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(txt).then(()=>{
-          btn.classList.add('copied');
-          setTimeout(()=>{ btn.classList.remove('copied'); }, 900);
-        });
-      } else {
-        el.select?.(); document.execCommand?.('copy');
-      }
+      performCopy(txt, btn, el);
+    }
+
+    function copyText(text, btn){
+      performCopy(text, btn, null);
     }
     function undoLastMarker(){
       const removeFrom = (arr, hist) => {
