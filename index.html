@@ -6,7 +6,7 @@
 <title>KoordinatenWerk</title>
 
 <script>
-const APP_VERSION = 'v3.3.4';
+const APP_VERSION = 'v3.3.5';
 const APP_DATE    = '2025-09-29';
 </script>
 
@@ -3366,6 +3366,61 @@ const APP_DATE    = '2025-09-29';
       return letter >= 'N' ? 'N' : 'S';
     }
 
+    function sanitizeCustomMarkerUTMInput(raw){
+      if (raw == null) return '';
+      let value = String(raw).toUpperCase().replace(/[^0-9A-Z]+/g, ' ');
+      value = value.replace(/\s+/g, ' ').trim();
+      if (!value) return '';
+
+      const tokens = value.split(' ');
+      let first = tokens.shift() || '';
+      let zone = '';
+      let band = '';
+
+      const firstMatch = first.match(/^(\d{1,2})([C-HJ-NP-X]?)(\d*)$/);
+      if (firstMatch){
+        zone = firstMatch[1];
+        band = firstMatch[2] || '';
+        const trailingDigits = firstMatch[3] || '';
+        if (trailingDigits) tokens.unshift(trailingDigits);
+      } else {
+        zone = first.replace(/\D/g, '').slice(0, 2);
+        const letterMatch = first.match(/[C-HJ-NP-X]/);
+        if (letterMatch) band = letterMatch[0];
+      }
+
+      if (!zone){
+        return '';
+      }
+
+      if (!band && tokens.length && /^[C-HJ-NP-X]$/.test(tokens[0])){
+        band = tokens.shift();
+      }
+
+      let easting = '';
+      let northing = '';
+
+      if (tokens.length){
+        easting = tokens.shift().replace(/\D/g, '').slice(0, 6);
+      }
+      if (tokens.length){
+        northing = tokens.shift().replace(/\D/g, '').slice(0, 8);
+      }
+
+      let formatted = zone;
+      if (band) formatted += ` ${band}`;
+      if (easting) formatted += ` ${easting}`;
+      if (northing) formatted += ` ${northing}`;
+      return formatted.trim();
+    }
+
+    function sanitizeCustomMarkerMGRSInput(raw){
+      if (raw == null) return '';
+      let value = String(raw).toUpperCase().replace(/[^0-9A-Z]+/g, ' ');
+      value = value.replace(/\s+/g, ' ').trim();
+      return value;
+    }
+
     function parseCustomMarkerUTMString(input){
       const raw = String(input || '').toUpperCase().replace(/\s+/g, ' ').trim();
       if (!raw) return null;
@@ -3756,6 +3811,10 @@ const APP_DATE    = '2025-09-29';
       utmInput.placeholder = 'z. B. 32U 448933 5412345';
       utmInput.dataset.role = 'cm-utm-input';
       utmInput.autocomplete = 'off';
+      utmInput.spellcheck = false;
+      utmInput.inputMode = 'text';
+      utmInput.maxLength = 26;
+      utmInput.title = 'UTM-Format: Zone Band Ostwert Nordwert (z. B. 32 U 448933 5412345)';
       coordsEditWrap.appendChild(utmInput);
 
       const mgrsLabel = document.createElement('label');
@@ -3770,6 +3829,9 @@ const APP_DATE    = '2025-09-29';
       mgrsInput.placeholder = 'z. B. 32U NV 12345 67890';
       mgrsInput.dataset.role = 'cm-mgrs-input';
       mgrsInput.autocomplete = 'off';
+      mgrsInput.spellcheck = false;
+      mgrsInput.inputMode = 'text';
+      mgrsInput.maxLength = 24;
       coordsEditWrap.appendChild(mgrsInput);
 
       const coordError = document.createElement('div');
@@ -3837,7 +3899,11 @@ const APP_DATE    = '2025-09-29';
       const handleUtmUpdate = (force=false) => {
         if (!coordCheckbox.checked || isSyncingCoords) return;
         if (!force) clearCoordError();
-        const parsed = parseCustomMarkerUTMString(utmInput.value);
+        const sanitized = sanitizeCustomMarkerUTMInput(utmInput.value);
+        if (utmInput.value !== sanitized){
+          utmInput.value = sanitized;
+        }
+        const parsed = parseCustomMarkerUTMString(sanitized);
         if (!parsed){
           if (force) setCoordError('UTM-Eingabe unvollständig oder ungültig.');
           return;
@@ -3864,7 +3930,11 @@ const APP_DATE    = '2025-09-29';
           setCoordError('MGRS-Umrechnung nicht verfügbar.');
           return;
         }
-        const latLng = parseCustomMarkerMGRSString(mgrsInput.value);
+        const sanitized = sanitizeCustomMarkerMGRSInput(mgrsInput.value);
+        if (mgrsInput.value !== sanitized){
+          mgrsInput.value = sanitized;
+        }
+        const latLng = parseCustomMarkerMGRSString(sanitized);
         if (!latLng){
           if (force) setCoordError('MGRS-Eingabe unvollständig oder ungültig.');
           return;
@@ -3879,14 +3949,44 @@ const APP_DATE    = '2025-09-29';
         }
       };
 
-      utmInput.addEventListener('input', () => handleUtmUpdate(false));
+      let suppressUtmSanitize = false;
+      const applyUtmSanitize = () => {
+        if (suppressUtmSanitize) return;
+        const sanitized = sanitizeCustomMarkerUTMInput(utmInput.value);
+        if (sanitized !== utmInput.value){
+          suppressUtmSanitize = true;
+          utmInput.value = sanitized;
+          try{ utmInput.setSelectionRange(sanitized.length, sanitized.length); }catch{}
+          suppressUtmSanitize = false;
+        }
+      };
+
+      utmInput.addEventListener('input', () => {
+        applyUtmSanitize();
+        handleUtmUpdate(false);
+      });
       utmInput.addEventListener('change', () => handleUtmUpdate(true));
       utmInput.addEventListener('blur', () => handleUtmUpdate(true));
       utmInput.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter'){ ev.preventDefault(); handleUtmUpdate(true); }
       });
 
-      mgrsInput.addEventListener('input', () => handleMgrsUpdate(false));
+      let suppressMgrsSanitize = false;
+      const applyMgrsSanitize = () => {
+        if (suppressMgrsSanitize) return;
+        const sanitized = sanitizeCustomMarkerMGRSInput(mgrsInput.value);
+        if (sanitized !== mgrsInput.value){
+          suppressMgrsSanitize = true;
+          mgrsInput.value = sanitized;
+          try{ mgrsInput.setSelectionRange(sanitized.length, sanitized.length); }catch{}
+          suppressMgrsSanitize = false;
+        }
+      };
+
+      mgrsInput.addEventListener('input', () => {
+        applyMgrsSanitize();
+        handleMgrsUpdate(false);
+      });
       mgrsInput.addEventListener('change', () => handleMgrsUpdate(true));
       mgrsInput.addEventListener('blur', () => handleMgrsUpdate(true));
       mgrsInput.addEventListener('keydown', (ev) => {
