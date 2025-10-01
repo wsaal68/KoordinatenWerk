@@ -6,7 +6,7 @@
     <title>KoordinatenWerk</title>
 
     <script>
-      const APP_VERSION = "v3.4.0";
+      const APP_VERSION = "v3.5.0";
       const APP_DATE = "2025-10-01";
     </script>
 
@@ -84,6 +84,22 @@
         transition: transform 0.42s cubic-bezier(0.22, 0.61, 0.36, 1),
           margin-right 0.42s cubic-bezier(0.22, 0.61, 0.36, 1);
         z-index: 1000;
+        scrollbar-color: #1b2430 #0f1626;
+        overscroll-behavior: contain;
+      }
+      .panel::-webkit-scrollbar {
+        width: 10px;
+      }
+      .panel::-webkit-scrollbar-track {
+        background: #0f1626;
+      }
+      .panel::-webkit-scrollbar-thumb {
+        background: #1b2430;
+        border-radius: 8px;
+        border: 1px solid #2b3446;
+      }
+      .panel::-webkit-scrollbar-thumb:hover {
+        background: #24324a;
       }
       body.panel-collapsed .panel {
         transform: translateX(calc(-100% + 6px));
@@ -256,9 +272,10 @@
       /* Angenehme Hover-/Active-Effekte für Buttons */
       .card button:hover:not(:disabled) {
         background: #223045;
+        color: #8fb4ff;
         transform: translateY(-1px);
         box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
-        filter: brightness(1.03);
+        filter: brightness(1.2);
       }
       .card button:active:not(:disabled) {
         transform: translateY(0);
@@ -268,6 +285,9 @@
       .card button:focus-visible {
         outline: 2px solid var(--brand);
         outline-offset: 2px;
+      }
+      .card button:disabled {
+        cursor: not-allowed;
       }
 
       /* Hover-/Active für Kopier-Buttons */
@@ -364,6 +384,14 @@
         grid-template-columns: repeat(4, 1fr);
         gap: 8px;
       }
+      .mission-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+      }
+      .mission-row input {
+        flex: 1 1 auto;
+      }
 
       small.hint {
         opacity: 0.75;
@@ -376,6 +404,92 @@
         color: #c9d3e0;
         white-space: nowrap;
       }
+      .mission-title {
+        margin: 18px 0 4px 0;
+        font-size: 16px;
+        color: var(--brand);
+      }
+      .mission-row .mission-clear {
+        width: var(--ctl-h);
+        min-width: var(--ctl-h);
+        padding: 0;
+        font-size: 20px;
+        line-height: 1;
+      }
+      .section-box {
+        background: #101722;
+        border: 1px solid #2b3446;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .section-box .btnrow,
+      .section-box .btnrow-3 {
+        margin-top: 0;
+      }
+      .mission-fields {
+        background: #101722;
+        border: 1px solid #2b3446;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .mission-fields .mission-row {
+        margin-top: 0;
+      }
+      .tabbox {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+      }
+      .tabbox-btn {
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid #2b3446;
+        background: #131b28;
+        color: #c9d3e0;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease,
+          border-color 0.15s ease;
+      }
+      .tabbox-btn:hover,
+      .tabbox-btn:focus-visible {
+        background: #223045;
+        color: #8fb4ff;
+        border-color: #3f4c63;
+        outline: none;
+      }
+      .tabbox-btn-active {
+        background: #8fb4ff;
+        color: #0b1424;
+        border-color: #8fb4ff;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+        transform: translateY(-1px);
+        font-weight: 700;
+      }
+      .tabbox-btn-active:hover,
+      .tabbox-btn-active:focus-visible {
+        background: #9ac0ff;
+        color: #0b1424;
+        border-color: #9ac0ff;
+        outline: none;
+      }
+      .tabbox-panels {
+        padding: 0;
+      }
+      .tabbox-panel {
+        display: block;
+      }
+      .tabbox-panel[hidden] {
+        display: none;
+      }
       .warn {
         font-size: 12px;
         color: #ffadad;
@@ -385,7 +499,7 @@
         border: 0;
         border-top: 1px solid var(--line);
         opacity: 0.8;
-        margin: 12px 0;
+        margin: 10px 0;
       }
 
       .wch {
@@ -561,7 +675,7 @@
         padding: 6px 10px;
         min-height: var(--ctl-h);
         background: #1b2330;
-        color: #00ff33;
+        color: #8fb4ff;
         border: 1px solid #3a4354;
         border-radius: 6px;
         cursor: pointer;
@@ -1159,6 +1273,40 @@
         display: none;
         pointer-events: none;
       }
+      .mission-banner {
+        position: absolute;
+        top: 52px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1499;
+        background: #ffff00;
+        color: #101010;
+        border: 1px solid rgba(0, 0, 0, 0.85);
+        border-radius: 8px;
+        padding: 6px 14px;
+        font: 14px/1.2 Arial, sans-serif;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        pointer-events: none;
+      }
+      .mission-details {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        z-index: 1499;
+        max-width: 280px;
+        background: #ffff00;
+        color: #101010;
+        border: 1px solid rgba(0, 0, 0, 0.85);
+        border-radius: 8px;
+        padding: 8px 14px;
+        font: 13px/1.3 Arial, sans-serif;
+        text-align: left;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        white-space: pre-line;
+        pointer-events: none;
+      }
 
       #measureInfo {
         margin-top: 10px;
@@ -1535,7 +1683,7 @@
       <!-- Adresse / Geocoding -->
       <div class="card">
         <h2>Adresse / Ort / POI</h2>
-        <form id="addrForm">
+        <form id="addrForm" class="section-box" style="gap: 8px">
           <input
             id="addrQuery"
             type="text"
@@ -1544,9 +1692,9 @@
           <div
             id="addrHint"
             class="hint"
-            style="display: none; margin-top: 6px"
+            style="display: none; margin-top: 0"
           ></div>
-          <div class="btnrow-3" style="margin-top: 8px">
+          <div class="btnrow-3">
             <button id="addrSearch" type="submit">Suchen</button>
             <button
               id="addrReset"
@@ -1563,466 +1711,657 @@
               Zentrieren
             </button>
           </div>
-          <select
-            id="addrResults"
-            style="display: none; margin-top: 8px"
-          ></select>
+          <select id="addrResults" style="display: none"></select>
         </form>
+      </div>
+
+      <!-- Koordinaten Tabs -->
+      <!-- <hr class="divider" /> -->
+      <div class="card" id="sec-coord-tabs">
+        <h2>Koordinaten</h2>
+        <div class="section-box" style="gap: 12px">
+          <div class="tabbox" role="tablist" aria-label="Koordinatenansichten">
+            <button
+              type="button"
+              class="tabbox-btn tabbox-btn-active"
+              id="tabBtnUTM"
+              data-tab-target="tabUTM"
+              role="tab"
+              aria-controls="tabUTM"
+              aria-selected="true"
+              tabindex="0"
+            >
+              UTM
+            </button>
+            <button
+              type="button"
+              class="tabbox-btn"
+              id="tabBtnMGRS"
+              data-tab-target="tabMGRS"
+              role="tab"
+              aria-controls="tabMGRS"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              MGRS
+            </button>
+            <button
+              type="button"
+              class="tabbox-btn"
+              id="tabBtnDD"
+              data-tab-target="tabDD"
+              role="tab"
+              aria-controls="tabDD"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              Dezimal
+            </button>
+            <button
+              type="button"
+              class="tabbox-btn"
+              id="tabBtnDMS"
+              data-tab-target="tabDMS"
+              role="tab"
+              aria-controls="tabDMS"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              DMS
+            </button>
+          </div>
+          <hr class="divider" style="margin: 1px 0 1px" />
+          <div class="tabbox-panels">
+            <div
+              id="tabUTM"
+              class="tabbox-panel tabbox-panel-active"
+              role="tabpanel"
+              aria-labelledby="tabBtnUTM"
+            >
+              <div id="sec-utm">
+                <h3>UTM Koordinaten</h3>
+                <div class="grid-5">
+                  <div>
+                    <label for="utmZone">Zone</label>
+                    <input
+                      id="utmZone"
+                      class="wch"
+                      style="--ch: 2"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="2"
+                      pattern="([1-9]|[1-5][0-9]|60)"
+                    />
+                  </div>
+                  <div>
+                    <label for="utmBand">Band</label>
+                    <input
+                      id="utmBand"
+                      class="wch"
+                      style="--ch: 2"
+                      type="text"
+                      readonly
+                    />
+                  </div>
+                  <div>
+                    <label for="utmHem">Halbkugel</label>
+                    <select id="utmHem" class="wch" style="--ch: 2">
+                      <option value="N">N</option>
+                      <option value="S">S</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="utmOstwert">Ostwert (m)</label>
+                    <input
+                      id="utmOstwert"
+                      class="wch"
+                      style="--ch: 12"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="10"
+                      pattern="\d{5,6}"
+                    />
+                  </div>
+                  <div>
+                    <label for="utmNordwert">Nordwert (m)</label>
+                    <input
+                      id="utmNordwert"
+                      class="wch"
+                      style="--ch: 14"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="12"
+                      pattern="\d{1,8}"
+                    />
+                  </div>
+                </div>
+
+                <div class="row-2" style="margin-top: 8px">
+                  <div style="grid-column: 1 / -1">
+                    <label for="utmString">UTM Koordinate</label>
+                    <div class="copyrow">
+                      <input
+                        id="utmString"
+                        class="wch"
+                        style="--ch: 50"
+                        type="text"
+                        readonly
+                      />
+                      <button
+                        id="copyUtm"
+                        type="button"
+                        class="copybtn"
+                        title="UTM kopieren"
+                        aria-label="UTM kopieren"
+                        data-notice="utmCopyNotice"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <rect
+                            x="9"
+                            y="3"
+                            width="11"
+                            height="14"
+                            rx="2"
+                          ></rect>
+                          <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div
+                      id="utmCopyNotice"
+                      class="copy-notice"
+                      role="status"
+                      aria-live="polite"
+                    ></div>
+                  </div>
+                </div>
+
+                <div id="utmWarn" class="warn" style="display: none"></div>
+              </div>
+            </div>
+            <div
+              id="tabMGRS"
+              class="tabbox-panel"
+              role="tabpanel"
+              aria-labelledby="tabBtnMGRS"
+              hidden
+            >
+              <div id="sec-mgrs">
+                <h3>MGRS Koordinaten</h3>
+                <div class="grid-4">
+                  <div>
+                    <label for="mgrsZoneBand">Zone+Band</label>
+                    <input
+                      id="mgrsZoneBand"
+                      class="wch"
+                      style="--ch: 3"
+                      type="text"
+                      maxlength="3"
+                      placeholder="32U"
+                    />
+                  </div>
+                  <div>
+                    <label for="mgrs100k">100km</label>
+                    <input
+                      id="mgrs100k"
+                      class="wch"
+                      style="--ch: 2"
+                      type="text"
+                      maxlength="2"
+                      placeholder="NV"
+                    />
+                  </div>
+                  <div>
+                    <label for="mgrsE">Ostwert</label>
+                    <input
+                      id="mgrsE"
+                      class="wch"
+                      style="--ch: 5"
+                      type="text"
+                      maxlength="5"
+                      placeholder="70169"
+                    />
+                  </div>
+                  <div>
+                    <label for="mgrsN">Nordwert</label>
+                    <input
+                      id="mgrsN"
+                      class="wch"
+                      style="--ch: 5"
+                      type="text"
+                      maxlength="5"
+                      placeholder="50301"
+                    />
+                  </div>
+                </div>
+                <div class="copyrow" style="margin-top: 8px">
+                  <div style="flex: 1">
+                    <label for="mgrsString">MGRS Koordinate</label>
+                    <input
+                      id="mgrsString"
+                      class="wch"
+                      style="--ch: 34"
+                      type="text"
+                      readonly
+                    />
+                  </div>
+                  <button
+                    id="copyMgrs"
+                    type="button"
+                    class="copybtn"
+                    title="MGRS kopieren"
+                    aria-label="MGRS kopieren"
+                    data-notice="mgrsCopyNotice"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+                      <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div
+                  id="mgrsCopyNotice"
+                  class="copy-notice"
+                  role="status"
+                  aria-live="polite"
+                ></div>
+                <div id="mgrsWarn" class="warn" style="display: none"></div>
+              </div>
+            </div>
+            <div
+              id="tabDD"
+              class="tabbox-panel"
+              role="tabpanel"
+              aria-labelledby="tabBtnDD"
+              hidden
+            >
+              <div id="sec-dec">
+                <h3>Dezimale Grad</h3>
+                <div class="grid-2">
+                  <div>
+                    <label for="lat">Breite / Latitude (Lat)</label>
+                    <input
+                      id="lat"
+                      type="text"
+                      inputmode="decimal"
+                      maxlength="12"
+                      pattern="-?\d{1,2}(\.\d{1,6})?"
+                    />
+                  </div>
+                  <div>
+                    <label for="lng">Länge / Longitude (Lng)</label>
+                    <input
+                      id="lng"
+                      type="text"
+                      inputmode="decimal"
+                      maxlength="13"
+                      pattern="-?\d{1,3}(\.\d{1,6})?"
+                    />
+                  </div>
+                </div>
+                <div
+                  id="decWarn"
+                  class="warn"
+                  style="display: none; margin-top: 8px"
+                ></div>
+              </div>
+            </div>
+            <div
+              id="tabDMS"
+              class="tabbox-panel"
+              role="tabpanel"
+              aria-labelledby="tabBtnDMS"
+              hidden
+            >
+              <div id="sec-dms">
+                <h3>DMS (Grad ° / Minuten ′ / Sekunden ″)</h3>
+                <small class="hint" style="color: #c9d3e0; font-size: 11px"
+                  >Negative Grad setzen die Hemisphäre automatisch.</small
+                >
+
+                <h3>Breite / Latitude (Lat)</h3>
+                <div class="grid-4">
+                  <div>
+                    <label for="latDeg">Grad</label>
+                    <input
+                      id="latDeg"
+                      class="wch"
+                      style="--ch: 3"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="3"
+                      pattern="-?\d{1,2}"
+                    />
+                  </div>
+                  <div>
+                    <label for="latMin">Minuten</label>
+                    <input
+                      id="latMin"
+                      class="wch"
+                      style="--ch: 2"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="2"
+                      pattern="\d{1,2}"
+                    />
+                  </div>
+                  <div>
+                    <label for="latSec">Sekunden</label>
+                    <input
+                      id="latSec"
+                      class="wch"
+                      style="--ch: 6"
+                      type="text"
+                      inputmode="decimal"
+                      maxlength="6"
+                      pattern="\d{1,2}(\.\d{1,2})?"
+                    />
+                  </div>
+                  <div>
+                    <label for="latHem">Hemisphäre</label>
+                    <select id="latHem" class="wch" style="--ch: 3">
+                      <option value="N">N</option>
+                      <option value="S">S</option>
+                    </select>
+                  </div>
+                </div>
+
+                <h3 style="margin-top: 10px">Länge / Longitude (Lng)</h3>
+                <div class="grid-4">
+                  <div>
+                    <label for="lngDeg">Grad</label>
+                    <input
+                      id="lngDeg"
+                      class="wch"
+                      style="--ch: 4"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="4"
+                      pattern="-?\d{1,3}"
+                    />
+                  </div>
+                  <div>
+                    <label for="lngMin">Minuten</label>
+                    <input
+                      id="lngMin"
+                      class="wch"
+                      style="--ch: 2"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="2"
+                      pattern="\d{1,2}"
+                    />
+                  </div>
+                  <div>
+                    <label for="lngSec">Sekunden</label>
+                    <input
+                      id="lngSec"
+                      class="wch"
+                      style="--ch: 6"
+                      type="text"
+                      inputmode="decimal"
+                      maxlength="6"
+                      pattern="\d{1,2}(\.\d{1,2})?"
+                    />
+                  </div>
+                  <div>
+                    <label for="lngHem">Hemisphäre</label>
+                    <select id="lngHem" class="wch" style="--ch: 3">
+                      <option value="E">E</option>
+                      <option value="W">W</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="dmsWarn" class="warn" style="display: none"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Kartenstil & Raster -->
       <hr class="divider" />
       <div class="card" id="sec-basemap">
-        <h2>Kartenstil & Raster</h2>
-        <div class="grid-2">
-          <div>
-            <label for="baseLayer">Basiskarte</label>
-            <select id="baseLayer">
-              <option value="osm" selected>Standard (OSM)</option>
-              <option value="esri">Satellit (Esri)</option>
-            </select>
-          </div>
-          <div>
-            <label for="gridType">Raster</label>
-            <select id="gridType">
-              <option value="auto" selected>Auto (zoomabhängig)</option>
-              <option value="none">Kein Raster</option>
-              <option value="utm1">UTM 1 km (Zoom 13-19)</option>
-              <option value="utm10">UTM 10 km (Zoom 9-19)</option>
-              <option value="mgrs100">MGRS 100 km (Zoom 5-19)</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="gridOptions">
-          <div class="inline-pickers" style="margin-top: 8px">
-            <label for="gridColor">Rasterfarbe</label>
-            <input id="gridColor" type="color" value="#ff0000" />
-            <label for="gridLabelColor">Beschriftungsfarbe</label>
-            <input id="gridLabelColor" type="color" value="#0000a0" />
-          </div>
-
-          <div class="checkbox-row">
+        <h2>Kartenlayout & Zusatzanzeige</h2>
+        <div class="section-box" id="layoutBox">
+          <div class="grid-2">
             <div>
-              <input id="gridLabelsChk" type="checkbox" checked />
-              <label for="gridLabelsChk">Raster beschriften</label>
+              <h3>Basiskarte</h3>
+              <select id="baseLayer">
+                <option value="osm" selected>Standard (OSM)</option>
+                <option value="esri">Satellit (Esri)</option>
+              </select>
             </div>
             <div>
-              <input id="gridAutoContrast" type="checkbox" checked />
-              <label for="gridAutoContrast">Kontrast automatisch</label>
-            </div>
-            <div>
-              <input id="hudToggle" type="checkbox" checked />
-              <label for="hudToggle">Live-Koordinaten</label>
+              <h3>Raster</h3>
+              <select id="gridType">
+                <option value="auto" selected>Auto (zoomabhängig)</option>
+                <option value="none">Kein Raster</option>
+                <option value="utm1">UTM 1 km (Zoom 13-19)</option>
+                <option value="utm10">UTM 10 km (Zoom 9-19)</option>
+                <option value="mgrs100">MGRS 100 km (Zoom 5-19)</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        <!-- Overlays -->
-        <hr class="divider" />
-        <h3 style="margin-top: 10px; display: inline">Zusatzanzeige</h3>
-        <span class="hint" style="color: #c9d3e0; font-size: 11px"
-          >(THW ab Zoom 11, sonst ab Zoom 12)</span
-        >
-        <div>
-          <span class="hint" style="color: #c9d3e0; font-size: 11px"
-            >Daten werden dann nachgeladen; jedoch teilweise nicht alle
-            verfügbar.</span
+          <div id="gridOptions">
+            <div class="inline-pickers" style="margin-top: 8px">
+              <label for="gridColor">Rasterfarbe</label>
+              <input id="gridColor" type="color" value="#ff0000" />
+              <label for="gridLabelColor">Beschriftungsfarbe</label>
+              <input id="gridLabelColor" type="color" value="#0000a0" />
+            </div>
+
+            <div class="checkbox-row">
+              <div>
+                <input id="gridLabelsChk" type="checkbox" checked />
+                <label for="gridLabelsChk">Raster beschriften</label>
+              </div>
+              <div>
+                <input id="gridAutoContrast" type="checkbox" checked />
+                <label for="gridAutoContrast">Standardfarbe</label>
+              </div>
+              <div>
+                <input id="hudToggle" type="checkbox" checked />
+                <label for="hudToggle">Live-HUD</label>
+              </div>
+            </div>
+          </div>
+
+          <hr class="divider" style="margin: 1px 0 1px" />
+          <span class="hint" style="color: #c9d3e0; font-size: 11px">
+            <h3 style="margin-top: 0; display: inline">Zusatzanzeige</h3>
+            (THW ab Zoom 11, sonst ab Zoom 12)</span
           >
-        </div>
-        <div class="checkbox-row" id="overlayRow">
-          <div>
-            <input id="olTHW" type="checkbox" /><label for="olTHW"
-              ><span class="ov-name">THW</span>
-              <span class="ov-status" id="stTHW"></span
-            ></label>
+          <div class="checkbox-row" id="overlayRow">
+            <div>
+              <input id="olTHW" type="checkbox" /><label for="olTHW"
+                ><span class="ov-name">THW</span>
+                <span class="ov-status" id="stTHW"></span
+              ></label>
+            </div>
+            <div>
+              <input id="olFW" type="checkbox" /><label for="olFW"
+                ><span class="ov-name">Feuerwehren</span>
+                <span class="ov-status" id="stFW"></span
+              ></label>
+            </div>
+            <div>
+              <input id="olHOS" type="checkbox" /><label for="olHOS"
+                ><span class="ov-name">Krankenhäuser</span>
+                <span class="ov-status" id="stHOS"></span
+              ></label>
+            </div>
+            <div>
+              <input id="olPOL" type="checkbox" /><label for="olPOL"
+                ><span class="ov-name">Polizei</span>
+                <span class="ov-status" id="stPOL"></span
+              ></label>
+            </div>
+            <div>
+              <input id="olSP" type="checkbox" /><label for="olSP"
+                ><span class="ov-name">Sportstätten</span>
+                <span class="ov-status" id="stSP"></span
+              ></label>
+            </div>
+            <div>
+              <input id="olHYD" type="checkbox" /><label for="olHYD"
+                ><span class="ov-name">Hydranten</span>
+                <span class="ov-status" id="stHYD"></span
+              ></label>
+            </div>
           </div>
-          <div>
-            <input id="olFW" type="checkbox" /><label for="olFW"
-              ><span class="ov-name">Feuerwehren</span>
-              <span class="ov-status" id="stFW"></span
-            ></label>
+          <div class="ov-legend">
+            Statusanzeige:
+            <span class="ov-status loading" title="lädt"></span> Lädt
+            <span class="ov-status ok" title="ok"></span> Geladen
+            <span class="ov-status paused" title="Pause"></span> Warten
+            <span class="ov-status error" title="Fehler"></span> Fehler
+            <span class="ov-status"></span> Inaktiv
           </div>
-          <div>
-            <input id="olHOS" type="checkbox" /><label for="olHOS"
-              ><span class="ov-name">Krankenhäuser</span>
-              <span class="ov-status" id="stHOS"></span
-            ></label>
-          </div>
-          <div>
-            <input id="olPOL" type="checkbox" /><label for="olPOL"
-              ><span class="ov-name">Polizei</span>
-              <span class="ov-status" id="stPOL"></span
-            ></label>
-          </div>
-          <div>
-            <input id="olSP" type="checkbox" /><label for="olSP"
-              ><span class="ov-name">Sportstätten</span>
-              <span class="ov-status" id="stSP"></span
-            ></label>
-          </div>
-          <div>
-            <input id="olHYD" type="checkbox" /><label for="olHYD"
-              ><span class="ov-name">Hydranten</span>
-              <span class="ov-status" id="stHYD"></span
-            ></label>
-          </div>
-        </div>
-        <div class="ov-legend">
-          Statusanzeige:
-          <span class="ov-status loading" title="lädt"></span> Lädt Daten •
-          <span class="ov-status ok" title="ok"></span> Geladen •
-          <span class="ov-status paused" title="Pause"></span> Warten •
-          <span class="ov-status error" title="Fehler"></span> Fehler •
-          <span class="ov-status"></span> Inaktiv
         </div>
 
         <!-- Hydranten-Zählung entfernt -->
       </div>
-
-      <!-- UTM -->
-      <hr class="divider" />
-      <div class="card" id="sec-utm">
-        <h2>UTM Koordinaten</h2>
-
-        <div class="grid-5">
-          <div>
-            <label for="utmZone">Zone</label>
-            <input
-              id="utmZone"
-              class="wch"
-              style="--ch: 2"
-              type="text"
-              inputmode="numeric"
-              maxlength="2"
-              pattern="([1-9]|[1-5][0-9]|60)"
-            />
+      <!-- Messen -->
+      <!-- <hr class="divider" /> -->
+      <div class="card" id="sec-measure">
+        <h2 style="margin-bottom: 6px">Messen in der Karte</h2>
+        <!-- <div
+          id="customMeasureHint"
+          class="hint"
+          style="color: #c9d3e0; font-size: 11px"
+        >
+          Strecken und Flächen zwischen Punkten direkt in der Karte messen.
+        </div> -->
+        <div class="section-box" style="gap: 6px; padding: 12px 12px 8px">
+          <div class="btnrow">
+            <button id="measureDist">Strecke</button>
+            <button id="measureArea">Fläche</button>
+            <button id="measureUndo" type="button">Entfernen</button>
+            <button id="measureClear" type="button">Löschen</button>
           </div>
-          <div>
-            <label for="utmBand">Band</label>
-            <input
-              id="utmBand"
-              class="wch"
-              style="--ch: 2"
-              type="text"
-              readonly
-            />
-          </div>
-          <div>
-            <label for="utmHem">Halbkugel</label>
-            <select id="utmHem" class="wch" style="--ch: 2">
-              <option value="N">N</option>
-              <option value="S">S</option>
-            </select>
-          </div>
-          <div>
-            <label for="utmOstwert">Ostwert (m)</label>
-            <input
-              id="utmOstwert"
-              class="wch"
-              style="--ch: 12"
-              type="text"
-              inputmode="numeric"
-              maxlength="10"
-              pattern="\d{5,6}"
-            />
-          </div>
-          <div>
-            <label for="utmNordwert">Nordwert (m)</label>
-            <input
-              id="utmNordwert"
-              class="wch"
-              style="--ch: 14"
-              type="text"
-              inputmode="numeric"
-              maxlength="12"
-              pattern="\d{1,8}"
-            />
-          </div>
+          <div id="measureInfo" class="hint" style="margin-top: 1px"></div>
         </div>
+        <!-- <hr class="divider" /> -->
+        <div class="card" id="sec-measure">
+          <h2 style="margin-top: 18px">Eigene Markierungen</h2>
+          <!-- <div
+            id="customTexteHint"
+            class="hint"
+            style="color: #c9d3e0; font-size: 11px"
+          >
+            Platziert eigene Markierungen unterschiedlichster Art in der Karte.
+          </div> -->
+          <div class="section-box" style="gap: 10px; padding-top: 8px">
+            <div class="btnrow-3">
+              <button id="customMarkerToggle" type="button">
+                Marker setzen
+              </button>
+              <button id="customMarkerVisibility" type="button">
+                Marker ausblenden
+              </button>
+              <button id="customMarkerClear" type="button">Alle löschen</button>
+            </div>
 
-        <div class="row-2" style="margin-top: 8px">
-          <div style="grid-column: 1 / -1">
-            <label for="utmString">UTM Koordinate</label>
-            <div class="copyrow">
+            <div id="customMarkerHint" class="hint" hidden>
+              Modus <b>Marker setzen</b>: Klick in die Karte legt einen neuen
+              Marker an. Marker lassen sich per Drag &amp; Drop verschieben.
+              Popup öffnen, um Text zu speichern oder den Marker zu löschen.
+            </div>
+          </div>
+
+          <!-- <hr class="divider" /> -->
+
+          <h2 class="mission-title">Einsatzinformationen</h2>
+
+          <!-- <div
+            id="customTexteHint"
+            class="hint"
+            style="color: #c9d3e0; font-size: 11px"
+          >
+            Die Texte werden in der Karte angezeigt. Bezeicnung oben; Leitungen
+            rechts.
+          </div> -->
+
+          <div class="mission-fields">
+            <div class="mission-row">
               <input
-                id="utmString"
-                class="wch"
-                style="--ch: 50"
+                id="missionText"
                 type="text"
-                readonly
+                placeholder="Bezeichnung des Einsatzes"
+                autocomplete="off"
+                aria-label="Einsatzbezeichnung"
               />
               <button
-                id="copyUtm"
+                id="missionClear"
                 type="button"
-                class="copybtn"
-                title="UTM kopieren"
-                aria-label="UTM kopieren"
-                data-notice="utmCopyNotice"
+                class="mission-clear"
+                aria-label="Einsatz löschen"
+                disabled
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="9" y="3" width="11" height="14" rx="2"></rect>
-                  <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
-                </svg>
+                &times;
               </button>
             </div>
-            <div
-              id="utmCopyNotice"
-              class="copy-notice"
-              role="status"
-              aria-live="polite"
-            ></div>
+            <div class="mission-row">
+              <input
+                id="missionLead"
+                type="text"
+                placeholder="Einsatzleitung"
+                autocomplete="off"
+                aria-label="Einsatzleitung"
+              />
+              <button
+                id="missionLeadClear"
+                type="button"
+                class="mission-clear"
+                aria-label="Einsatzleitung löschen"
+                disabled
+              >
+                &times;
+              </button>
+            </div>
+            <div class="mission-row">
+              <input
+                id="missionSection"
+                type="text"
+                placeholder="Einsatzabschnittsleitung"
+                autocomplete="off"
+                aria-label="Einsatzabschnittsleitung"
+              />
+              <button
+                id="missionSectionClear"
+                type="button"
+                class="mission-clear"
+                aria-label="Einsatzabschnittsleitung löschen"
+                disabled
+              >
+                &times;
+              </button>
+            </div>
+            <div class="mission-row">
+              <input
+                id="missionEnterSection"
+                type="text"
+                placeholder="Untereinsatzabschnittsleitung"
+                autocomplete="off"
+                aria-label="Untereinsatzabschnittsleitung"
+              />
+              <button
+                id="missionEnterSectionClear"
+                type="button"
+                class="mission-clear"
+                aria-label="Untereinsatzabschnittsleitung löschen"
+                disabled
+              >
+                &times;
+              </button>
+            </div>
           </div>
         </div>
-
-        <div id="utmWarn" class="warn" style="display: none"></div>
-      </div>
-
-      <!-- MGRS -->
-      <hr class="divider" />
-      <div class="card" id="sec-mgrs">
-        <h2>MGRS Koordinaten</h2>
-        <div class="grid-4">
-          <div>
-            <label for="mgrsZoneBand">Zone+Band</label>
-            <input
-              id="mgrsZoneBand"
-              class="wch"
-              style="--ch: 3"
-              type="text"
-              maxlength="3"
-              placeholder="32U"
-            />
-          </div>
-          <div>
-            <label for="mgrs100k">100km</label>
-            <input
-              id="mgrs100k"
-              class="wch"
-              style="--ch: 2"
-              type="text"
-              maxlength="2"
-              placeholder="NV"
-            />
-          </div>
-          <div>
-            <label for="mgrsE">Ostwert</label>
-            <input
-              id="mgrsE"
-              class="wch"
-              style="--ch: 5"
-              type="text"
-              maxlength="5"
-              placeholder="70169"
-            />
-          </div>
-          <div>
-            <label for="mgrsN">Nordwert</label>
-            <input
-              id="mgrsN"
-              class="wch"
-              style="--ch: 5"
-              type="text"
-              maxlength="5"
-              placeholder="50301"
-            />
-          </div>
-        </div>
-        <div class="copyrow" style="margin-top: 8px">
-          <div style="flex: 1">
-            <label for="mgrsString">MGRS Koordinate</label>
-            <input
-              id="mgrsString"
-              class="wch"
-              style="--ch: 34"
-              type="text"
-              readonly
-            />
-          </div>
-          <button
-            id="copyMgrs"
-            type="button"
-            class="copybtn"
-            title="MGRS kopieren"
-            aria-label="MGRS kopieren"
-            data-notice="mgrsCopyNotice"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="9" y="3" width="11" height="14" rx="2"></rect>
-              <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
-            </svg>
-          </button>
-        </div>
-        <div
-          id="mgrsCopyNotice"
-          class="copy-notice"
-          role="status"
-          aria-live="polite"
-        ></div>
-        <div id="mgrsWarn" class="warn" style="display: none"></div>
-      </div>
-
-      <!-- Dezimalgrad -->
-      <hr class="divider" />
-      <div class="card" id="sec-dec">
-        <h2>Dezimale Grad</h2>
-        <div class="grid-2">
-          <div>
-            <label for="lat">Breite / Latitude (Lat)</label>
-            <input
-              id="lat"
-              type="text"
-              inputmode="decimal"
-              maxlength="12"
-              pattern="-?\d{1,2}(\.\d{1,6})?"
-            />
-          </div>
-          <div>
-            <label for="lng">Länge / Longitude (Lng)</label>
-            <input
-              id="lng"
-              type="text"
-              inputmode="decimal"
-              maxlength="13"
-              pattern="-?\d{1,3}(\.\d{1,6})?"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- DMS -->
-      <hr class="divider" />
-      <div class="card" id="sec-dms">
-        <h2>DMS (Grad ° / Minuten ′ / Sekunden ″)</h2>
-        <small class="hint"
-          >Negative Grad setzen die Hemisphäre automatisch.</small
-        >
-
-        <h3>Breite / Latitude (Lat)</h3>
-        <div class="grid-4">
-          <div>
-            <label for="latDeg">Grad</label>
-            <input
-              id="latDeg"
-              class="wch"
-              style="--ch: 3"
-              type="text"
-              inputmode="numeric"
-              maxlength="3"
-              pattern="-?\d{1,2}"
-            />
-          </div>
-          <div>
-            <label for="latMin">Minuten</label>
-            <input
-              id="latMin"
-              class="wch"
-              style="--ch: 2"
-              type="text"
-              inputmode="numeric"
-              maxlength="2"
-              pattern="\d{1,2}"
-            />
-          </div>
-          <div>
-            <label for="latSec">Sekunden</label>
-            <input
-              id="latSec"
-              class="wch"
-              style="--ch: 6"
-              type="text"
-              inputmode="decimal"
-              maxlength="6"
-              pattern="\d{1,2}(\.\d{1,2})?"
-            />
-          </div>
-          <div>
-            <label for="latHem">Hemisphäre</label>
-            <select id="latHem" class="wch" style="--ch: 3">
-              <option value="N">N</option>
-              <option value="S">S</option>
-            </select>
-          </div>
-        </div>
-
-        <h3 style="margin-top: 10px">Länge / Longitude (Lng)</h3>
-        <div class="grid-4">
-          <div>
-            <label for="lngDeg">Grad</label>
-            <input
-              id="lngDeg"
-              class="wch"
-              style="--ch: 4"
-              type="text"
-              inputmode="numeric"
-              maxlength="4"
-              pattern="-?\d{1,3}"
-            />
-          </div>
-          <div>
-            <label for="lngMin">Minuten</label>
-            <input
-              id="lngMin"
-              class="wch"
-              style="--ch: 2"
-              type="text"
-              inputmode="numeric"
-              maxlength="2"
-              pattern="\d{1,2}"
-            />
-          </div>
-          <div>
-            <label for="lngSec">Sekunden</label>
-            <input
-              id="lngSec"
-              class="wch"
-              style="--ch: 6"
-              type="text"
-              inputmode="decimal"
-              maxlength="6"
-              pattern="\d{1,2}(\.\d{1,2})?"
-            />
-          </div>
-          <div>
-            <label for="lngHem">Hemisphäre</label>
-            <select id="lngHem" class="wch" style="--ch: 3">
-              <option value="E">E</option>
-              <option value="W">W</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Messen -->
-      <hr class="divider" />
-      <div class="card" id="sec-measure">
-        <h2>Messen in der Karte</h2>
-        <div class="btnrow">
-          <button id="measureDist">Strecke</button>
-          <button id="measureArea">Fläche</button>
-          <button id="measureUndo" type="button">Entfernen</button>
-          <button id="measureClear" type="button">Löschen</button>
-        </div>
-        <hr class="divider" />
-        <div class="card" id="sec-measure">
-          <h2>Eigene Marker</h2>
-          <div class="btnrow-3">
-            <button id="customMarkerToggle" type="button">Marker setzen</button>
-            <button id="customMarkerVisibility" type="button">
-              Marker ausblenden
-            </button>
-            <button id="customMarkerClear" type="button">Alle löschen</button>
-          </div>
-        </div>
-        <div id="customMarkerHint" class="hint">
-          Modus <b>Marker setzen</b>: Klick in die Karte legt einen neuen Marker
-          an. Marker lassen sich per Drag &amp; Drop verschieben. Popup öffnen,
-          um Text zu speichern oder den Marker zu löschen.
-        </div>
-        <div id="measureInfo" class="hint"></div>
 
         <div class="legal-wrap">
-          <hr class="divider" />
+          <!-- <hr class="divider" /> -->
           <div
             class="legal"
             style="
@@ -2030,7 +2369,7 @@
               padding: 10px 12px;
               border: 1px solid var(--line);
               border-radius: 8px;
-              background: #0f1622;
+              background: #1d242e;
               font-size: 12px;
               opacity: 0.95;
               display: flex;
@@ -2058,7 +2397,7 @@
               >Download</a
             >
             <span
-              >Erstellt für Technisches Hilfswerk Ortsverband Bad
+              >Erstellt für das Technische Hilfswerk Ortsverband Bad
               Bergzabern</span
             >
           </div>
@@ -2167,6 +2506,20 @@
         role="status"
         aria-live="polite"
       ></div>
+      <div
+        id="missionBanner"
+        class="mission-banner"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
+      <div
+        id="missionDetails"
+        class="mission-details"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
       <div id="coordHud" class="coord-hud">
         <div class="row"><b>Live-Koordinaten</b></div>
         <div class="row"><b>Lat/Lng:</b><span id="hudDD">—</span></div>
@@ -2253,6 +2606,12 @@
       let customMarkerLayerVisible = true;
       let customMarkerMode = false;
       let storageAvailable = true;
+      const missionData = {
+        name: "",
+        lead: "",
+        section: "",
+        enterSection: "",
+      };
 
       /* Overlays */
       let thwLayer, fwLayer, hosLayer, polLayer, spLayer;
@@ -2531,14 +2890,14 @@
           value: "custom",
           label: "Individuell",
           letter: "IND",
-          color: "#00ff33",
+          color: "#8fb4ff",
           shape: "circle",
         },
         {
           value: "einsatzstelle",
           label: "Einsatzstelle",
           letter: "E",
-          color: "#8fb4ff",
+          color: "#03fa0f",
           shape: "circle",
         },
         {
@@ -4905,7 +5264,7 @@
 
         if (auto) {
           const tip =
-            "Deaktiviert: „Kontrast automatisch“ ist aktiv. Schalte es aus, um Farben manuell zu wählen.";
+            "Deaktiviert: „Standardfarbe“ ist aktiv. Schalte es aus, um Farben manuell zu wählen.";
           line.title = tip;
           labl.title = tip;
         } else if (isNone) {
@@ -5324,6 +5683,7 @@
           );
           $("measureInfo").innerHTML = "";
           stagedClear = false;
+          updateMeasureControls();
           return;
         }
 
@@ -5387,6 +5747,13 @@
       function hasAny() {
         return hasDist() || hasArea();
       }
+      function updateMeasureControls() {
+        const hasMarkers = hasAny();
+        const undoBtn = $("measureUndo");
+        const clearBtn = $("measureClear");
+        if (undoBtn) undoBtn.disabled = !hasMarkers;
+        if (clearBtn) clearBtn.disabled = !hasMarkers;
+      }
 
       function clearMeasureSmart() {
         if (!hasAny()) return;
@@ -5415,6 +5782,7 @@
             $("measureInfo").innerHTML =
               "Punkte setzen, um eine Strecke zu bilden. <b>Entfernen</b>=letzter Punkt, <b>Löschen</b>=erst Strecke, dann alles.";
           }
+          updateMeasureControls();
           return;
         }
         const latlngs = distMarkers.map((m) => m.getLatLng());
@@ -5443,6 +5811,7 @@
             ).innerHTML = `<span class="hint">${ptsTxt} – mind. 2 für Strecke</span>`;
           }
         }
+        updateMeasureControls();
       }
       function attachDistMarker(m) {
         m.on("drag", updateDistance);
@@ -5511,6 +5880,7 @@
             $("measureInfo").innerHTML =
               "Punkte setzen, um ein Polygon zu bilden. <b>Entfernen</b>=letzter Punkt, <b>Löschen</b>=erst Fläche, dann alles.";
           }
+          updateMeasureControls();
           return;
         }
         if (!areaPoly)
@@ -5542,6 +5912,7 @@
             } Punkte – mind. 3 für Fläche</span>`;
           }
         }
+        updateMeasureControls();
       }
       function handleAreaClick(latlng) {
         const m = L.marker(latlng, { draggable: true, icon: iconArea }).addTo(
@@ -5920,6 +6291,109 @@
         if (clearBtn) clearBtn.disabled = count === 0;
       }
 
+      function setMissionValue(key, value) {
+        if (!Object.prototype.hasOwnProperty.call(missionData, key)) return;
+        missionData[key] = typeof value === "string" ? value.trim() : "";
+        updateMissionDisplay();
+      }
+
+      function updateMissionDisplay() {
+        const banner = $("missionBanner");
+        if (banner) {
+          banner.textContent = missionData.name;
+          banner.toggleAttribute("hidden", missionData.name === "");
+        }
+
+        const detailEl = $("missionDetails");
+        if (detailEl) {
+          const lines = [];
+          if (missionData.lead) lines.push(`EL: ${missionData.lead}`);
+          if (missionData.section) lines.push(`EAL: ${missionData.section}`);
+          if (missionData.enterSection)
+            lines.push(`UEAL: ${missionData.enterSection}`);
+
+          if (lines.length) {
+            detailEl.textContent = lines.join("\n");
+            detailEl.toggleAttribute("hidden", false);
+          } else {
+            detailEl.textContent = "";
+            detailEl.toggleAttribute("hidden", true);
+          }
+        }
+
+        [
+          ["missionClear", missionData.name],
+          ["missionLeadClear", missionData.lead],
+          ["missionSectionClear", missionData.section],
+          ["missionEnterSectionClear", missionData.enterSection],
+        ].forEach(([btnId, val]) => {
+          const btn = $(btnId);
+          if (btn) btn.disabled = !val;
+        });
+      }
+
+      function setupTabBox(container) {
+        const host = typeof container === "string" ? $(container) : container;
+        if (!host) return;
+        const buttons = Array.from(host.querySelectorAll(".tabbox-btn"));
+        if (!buttons.length) return;
+        const panels = new Map();
+        buttons.forEach((btn) => {
+          const targetId = btn.dataset.tabTarget;
+          if (targetId) {
+            const panel = document.getElementById(targetId);
+            if (panel) panels.set(targetId, panel);
+          }
+        });
+
+        const activate = (targetId) => {
+          buttons.forEach((btn) => {
+            const isActive = btn.dataset.tabTarget === targetId;
+            btn.classList.toggle("tabbox-btn-active", isActive);
+            btn.setAttribute("aria-selected", isActive ? "true" : "false");
+            btn.tabIndex = isActive ? 0 : -1;
+          });
+          panels.forEach((panel, id) => {
+            const show = id === targetId;
+            panel.toggleAttribute("hidden", !show);
+            panel.classList.toggle("tabbox-panel-active", show);
+            if (show) {
+              panel.setAttribute("data-tab-active", "true");
+            } else {
+              panel.removeAttribute("data-tab-active");
+            }
+          });
+        };
+
+        buttons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const targetId = btn.dataset.tabTarget;
+            if (targetId) activate(targetId);
+          });
+          btn.addEventListener("keydown", (e) => {
+            if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+            e.preventDefault();
+            const currentIndex = buttons.indexOf(btn);
+            if (currentIndex === -1) return;
+            const delta = e.key === "ArrowRight" ? 1 : -1;
+            const nextIndex =
+              (currentIndex + delta + buttons.length) % buttons.length;
+            buttons[nextIndex].focus();
+            const targetId = buttons[nextIndex].dataset.tabTarget;
+            if (targetId) activate(targetId);
+          });
+        });
+
+        const initial = buttons.find((btn) =>
+          btn.classList.contains("tabbox-btn-active")
+        );
+        if (initial && initial.dataset.tabTarget) {
+          activate(initial.dataset.tabTarget);
+        } else if (buttons[0] && buttons[0].dataset.tabTarget) {
+          activate(buttons[0].dataset.tabTarget);
+        }
+      }
+
       function buildCustomMarkerPopup(entry) {
         const container = document.createElement("div");
         container.className = "custom-marker-popup";
@@ -6048,7 +6522,7 @@
 
         const customInfo = getMarkerTypeInfo("custom");
         const defaultCustomColor =
-          sanitizeHexColor(customInfo.color) || "#00FF33";
+          sanitizeHexColor(customInfo.color) || "#8fb4ff";
         let pendingCustomColor =
           sanitizeHexColor(entry.data.color) || defaultCustomColor;
         const currentInfo = getMarkerTypeInfo(currentType);
@@ -6751,7 +7225,7 @@
             ? map.hasLayer(customMarkerLayer)
             : customMarkerLayerVisible;
         customMarkerLayerVisible = !!visible;
-        btn.textContent = visible ? "Marker ausblenden" : "Marker einblenden";
+        btn.textContent = visible ? "Ausblenden" : "Einblenden";
       }
 
       function setCustomMarkerVisibility(visible) {
@@ -6799,6 +7273,10 @@
             ? "Modus aktiv – Klick in die Karte legt einen neuen Marker an."
             : ""
         );
+        const markerHint = $("customMarkerHint");
+        if (markerHint) {
+          markerHint.toggleAttribute("hidden", !customMarkerMode);
+        }
         if (customMarkerMode && measureMode !== "none") {
           setMode(measureMode);
         }
@@ -7546,6 +8024,49 @@
           });
         }
         updateCustomMarkerVisibilityButton();
+        updateMeasureControls();
+        const markerHint = $("customMarkerHint");
+        if (markerHint) markerHint.hidden = true;
+
+        const missionFields = [
+          { input: "missionText", clear: "missionClear", key: "name" },
+          { input: "missionLead", clear: "missionLeadClear", key: "lead" },
+          {
+            input: "missionSection",
+            clear: "missionSectionClear",
+            key: "section",
+          },
+          {
+            input: "missionEnterSection",
+            clear: "missionEnterSectionClear",
+            key: "enterSection",
+          },
+        ];
+
+        missionFields.forEach(({ input, clear, key }) => {
+          const inputEl = $(input);
+          const clearBtn = $(clear);
+          const getValue = () => (inputEl ? inputEl.value : "");
+          const sync = () => setMissionValue(key, getValue());
+
+          if (inputEl) {
+            inputEl.addEventListener("input", sync);
+          }
+
+          if (clearBtn) {
+            clearBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              if (!inputEl || inputEl.disabled) return;
+              inputEl.value = "";
+              sync();
+              inputEl.focus();
+            });
+          }
+
+          sync();
+        });
+
+        setupTabBox("sec-coord-tabs");
 
         // ESC beendet Messung
         document.addEventListener("keydown", (e) => {
