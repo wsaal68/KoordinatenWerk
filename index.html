@@ -6,7 +6,7 @@
     <title>KoordinatenWerk</title>
 
     <script>
-      const APP_VERSION = "v3.5.0";
+      const APP_VERSION = "v3.5.1";
       const APP_DATE = "2025-10-01";
     </script>
 
@@ -314,11 +314,12 @@
       .inline-pickers input[type="color"] {
         width: 36px;
         min-width: 36px;
-        height: 28px;
+        height: 20px;
         padding: 0;
         border: none;
         background: transparent;
         min-height: 0;
+        margin-top: -2px;
       }
       input:disabled {
         cursor: not-allowed;
@@ -467,19 +468,19 @@
         outline: none;
       }
       .tabbox-btn-active {
-        background: #8fb4ff;
-        color: #0b1424;
-        border-color: #8fb4ff;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
-        transform: translateY(-1px);
+        background: #131b28;
+        color: #8fb4ff;
+        border-color: #3f4c63;
+        outline: 2px solid #6ea8fe;
+        transform: none;
         font-weight: 700;
       }
       .tabbox-btn-active:hover,
       .tabbox-btn-active:focus-visible {
-        background: #9ac0ff;
-        color: #0b1424;
-        border-color: #9ac0ff;
-        outline: none;
+        background: #1c2739;
+        color: #9ec1ff;
+        border-color: #4f5f7a;
+        outline: 2px solid #9ec1ff;
       }
       .tabbox-panels {
         padding: 0;
@@ -1176,6 +1177,23 @@
         border-radius: 10px;
         padding: 10px 14px;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+      }
+
+      #tacTimeOverlay {
+        position: absolute;
+        top: 12px;
+        left: 60px;
+        z-index: 10010;
+        display: none;
+        pointer-events: none;
+      }
+      #tacTimeOverlay.active {
+        display: block;
+      }
+      #tacTimeOverlay #tacTimeBox {
+        margin-left: 0;
+        background: rgba(15, 22, 34, 0.85);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
       }
 
       /* Generic HUD styling for both main HUD and overlay count HUD */
@@ -2145,7 +2163,7 @@
           </div>
 
           <div id="gridOptions">
-            <div class="inline-pickers" style="margin-top: 8px">
+            <div class="inline-pickers" style="margin-top: 4px">
               <label for="gridColor">Rasterfarbe</label>
               <input id="gridColor" type="color" value="#ff0000" />
               <label for="gridLabelColor">Beschriftungsfarbe</label>
@@ -2435,6 +2453,7 @@
     <!-- Karte + HUD -->
     <div class="map-wrap">
       <div id="map" role="region" aria-label="Karte"></div>
+      <div id="tacTimeOverlay" aria-hidden="true"></div>
       <section
         class="data-licensing-notice"
         aria-label="Lizenzhinweise zu Karten- und Fachdaten"
@@ -5438,6 +5457,20 @@
       const DIST_MAX_POINTS = 20;
       let stagedClear = false;
 
+      const DIST_HINT_HTML =
+        '<span class="hint">Punkte setzen, um eine Strecke zu bilden. <b>Entfernen</b>=letzter Punkt, <b>Löschen</b>=erst Strecke, dann alles.</span>';
+      const AREA_HINT_HTML =
+        '<span class="hint">Punkte setzen, um ein Polygon zu bilden. <b>Entfernen</b>=letzter Punkt, <b>Löschen</b>=erst Fläche, dann alles.</span>';
+      const EMPTY_RESULT_HTML = ""; // klare Angabe für lesbare Aufrufe
+      function renderMeasureInfo(hintHtml, resultHtml) {
+        const infoEl = $("measureInfo");
+        if (!infoEl) return;
+        const parts = [];
+        if (hintHtml) parts.push(hintHtml);
+        if (resultHtml) parts.push(resultHtml);
+        infoEl.innerHTML = parts.join("<br>");
+      }
+
       // Einfügen: Vorschau-Marker und Zielinformation
       let insertPreview = null; // L.Marker mit "+"
       let insertTarget = null; // { type:'distance'|'area', index:number, latlng:L.LatLng }
@@ -5681,7 +5714,7 @@
           ["measureDist", "measureArea"].forEach((id) =>
             $(id).classList.remove("modeActive")
           );
-          $("measureInfo").innerHTML = "";
+          renderMeasureInfo("", "");
           stagedClear = false;
           updateMeasureControls();
           return;
@@ -5702,7 +5735,7 @@
         } else if (mode === "area") {
           updateArea();
         } else {
-          $("measureInfo").innerHTML = "";
+          renderMeasureInfo("", "");
         }
         stagedClear = false;
       }
@@ -5720,7 +5753,11 @@
           map.removeLayer(areaPoly);
           areaPoly = null;
         }
-        $("measureInfo").innerHTML = "";
+        if (measureMode === "distance")
+          renderMeasureInfo(DIST_HINT_HTML, EMPTY_RESULT_HTML);
+        else if (measureMode === "area")
+          renderMeasureInfo(AREA_HINT_HTML, EMPTY_RESULT_HTML);
+        else renderMeasureInfo("", "");
       }
       function removeAllDistance() {
         distMarkers.forEach((m) => map.removeLayer(m));
@@ -5779,8 +5816,7 @@
             distLine = null;
           }
           if (measureMode === "distance") {
-            $("measureInfo").innerHTML =
-              "Punkte setzen, um eine Strecke zu bilden. <b>Entfernen</b>=letzter Punkt, <b>Löschen</b>=erst Strecke, dann alles.";
+            renderMeasureInfo(DIST_HINT_HTML, EMPTY_RESULT_HTML);
           }
           updateMeasureControls();
           return;
@@ -5796,23 +5832,21 @@
         }
         const ptsTxt = `${n} Punkt${n === 1 ? "" : "e"}`;
         const maxTxt = n === DIST_MAX_POINTS ? " – Maximum erreicht" : "";
-        if (n >= 2) {
-          if (measureMode === "distance") {
-            $(
-              "measureInfo"
-            ).innerHTML = `<b>Strecke (gesamt):</b> <span class="measure-value">${fmtDist(
+        if (measureMode === "distance") {
+          if (n >= 2) {
+            let resultHtml = `<b>Strecke (gesamt):</b> <span class="measure-value">${fmtDist(
               total
-            )}</span><br><span class="hint">${ptsTxt}${maxTxt}</span>`;
-          }
-        } else {
-          if (measureMode === "distance") {
-            $(
-              "measureInfo"
-            ).innerHTML = `<span class="hint">${ptsTxt} – mind. 2 für Strecke</span>`;
+            )}</span>`;
+            resultHtml += `<br><span class="hint">${ptsTxt}${maxTxt}</span>`;
+            renderMeasureInfo(DIST_HINT_HTML, resultHtml);
+          } else {
+            const status = `<span class="hint">${ptsTxt}${maxTxt} – mind. 2 für Strecke</span>`;
+            renderMeasureInfo(DIST_HINT_HTML, status);
           }
         }
         updateMeasureControls();
       }
+
       function attachDistMarker(m) {
         m.on("drag", updateDistance);
         const rm = () => {
@@ -5830,9 +5864,10 @@
       function handleDistanceClick(latlng) {
         if (distMarkers.length >= DIST_MAX_POINTS) {
           if (measureMode === "distance") {
-            $(
-              "measureInfo"
-            ).innerHTML = `<b>Strecke (gesamt):</b> —<br><span class="hint">Maximal ${DIST_MAX_POINTS} Punkte erreicht.</span>`;
+            renderMeasureInfo(
+              DIST_HINT_HTML,
+              `<b>Strecke (gesamt):</b> —<br><span class="hint">Maximal ${DIST_MAX_POINTS} Punkte erreicht.</span>`
+            );
           }
           return;
         }
@@ -5877,8 +5912,7 @@
             areaPoly = null;
           }
           if (measureMode === "area") {
-            $("measureInfo").innerHTML =
-              "Punkte setzen, um ein Polygon zu bilden. <b>Entfernen</b>=letzter Punkt, <b>Löschen</b>=erst Fläche, dann alles.";
+            renderMeasureInfo(AREA_HINT_HTML, EMPTY_RESULT_HTML);
           }
           updateMeasureControls();
           return;
@@ -5890,30 +5924,31 @@
         if (latlngs.length >= 3) {
           const { area, perimeter } = computeAreaUTM(latlngs);
           if (measureMode === "area") {
-            $(
-              "measureInfo"
-            ).innerHTML = `<b>Fläche:</b> <span class="measure-value">${fmtArea(
+            let resultHtml = `<b>Fläche:</b> <span class="measure-value">${fmtArea(
               area
-            )}</span><br><b>Umfang:</b> <span class="measure-value">${fmtDist(
+            )}</span>`;
+            resultHtml += `<br><b>Umfang:</b> <span class="measure-value">${fmtDist(
               perimeter
-            )}</span><br><span class="hint">${latlngs.length} Punkte</span>`;
+            )}</span>`;
+            resultHtml += `<br><span class="hint">${latlngs.length} Punkte</span>`;
+            renderMeasureInfo(AREA_HINT_HTML, resultHtml);
           }
         } else {
           let per = 0;
           for (let i = 0; i < latlngs.length - 1; i++)
             per += latlngs[i].distanceTo(latlngs[i + 1]);
           if (measureMode === "area") {
-            $(
-              "measureInfo"
-            ).innerHTML = `<b>Umfang (offen):</b> <span class="measure-value">${fmtDist(
-              per
-            )}</span><br><span class="hint">${
-              latlngs.length
-            } Punkte – mind. 3 für Fläche</span>`;
+            const status =
+              `<b>Umfang (offen):</b> <span class="measure-value">${fmtDist(
+                per
+              )}</span>` +
+              `<br><span class="hint">${latlngs.length} Punkte – mind. 3 für Fläche</span>`;
+            renderMeasureInfo(AREA_HINT_HTML, status);
           }
         }
         updateMeasureControls();
       }
+
       function handleAreaClick(latlng) {
         const m = L.marker(latlng, { draggable: true, icon: iconArea }).addTo(
           map
@@ -8236,6 +8271,43 @@
         /* Panel-Toggle mit Map-Resize */
         const panel = $("leftPanel");
         const toggle = $("panelToggle");
+        const tacTimeBox = $("tacTimeBox");
+        const tacTimeOverlay = $("tacTimeOverlay");
+        const tacTimeHome = tacTimeBox ? tacTimeBox.parentNode : null;
+        const tacTimePlaceholder = tacTimeBox
+          ? document.createElement("span")
+          : null;
+        if (tacTimeBox && tacTimeHome && tacTimePlaceholder) {
+          tacTimePlaceholder.style.display = "none";
+          tacTimePlaceholder.setAttribute("aria-hidden", "true");
+          tacTimeHome.insertBefore(tacTimePlaceholder, tacTimeBox.nextSibling);
+        }
+
+        function restoreTacTimeToPanel() {
+          if (!tacTimeBox) return;
+          if (tacTimePlaceholder && tacTimePlaceholder.parentNode) {
+            tacTimePlaceholder.parentNode.insertBefore(
+              tacTimeBox,
+              tacTimePlaceholder
+            );
+          } else if (tacTimeHome) {
+            tacTimeHome.appendChild(tacTimeBox);
+          }
+        }
+
+        function updateTacTimeLocation(collapsed) {
+          if (!tacTimeBox || !tacTimeOverlay) return;
+          if (collapsed) {
+            if (!tacTimeOverlay.contains(tacTimeBox)) {
+              tacTimeOverlay.appendChild(tacTimeBox);
+            }
+          } else if (tacTimeOverlay.contains(tacTimeBox)) {
+            restoreTacTimeToPanel();
+          }
+          const active = collapsed && tacTimeOverlay.contains(tacTimeBox);
+          tacTimeOverlay.classList.toggle("active", active);
+          tacTimeOverlay.setAttribute("aria-hidden", active ? "false" : "true");
+        }
 
         function invalidateMapSafely() {
           try {
@@ -8246,6 +8318,7 @@
         function applyPanelState(collapsed) {
           document.body.classList.toggle("panel-collapsed", collapsed);
           localStorage.setItem("kw_panel_collapsed", collapsed ? "1" : "0");
+          updateTacTimeLocation(collapsed);
 
           invalidateMapSafely();
           setTimeout(invalidateMapSafely, 60);
@@ -8279,6 +8352,9 @@
           setTimeout(invalidateMapSafely, 60);
           setTimeout(invalidateMapSafely, 500);
         }
+        updateTacTimeLocation(
+          document.body.classList.contains("panel-collapsed")
+        );
       });
     </script>
   </body>
