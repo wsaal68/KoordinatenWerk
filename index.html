@@ -6,8 +6,8 @@
     <title>KoordinatenWerk</title>
 
     <script>
-      const APP_VERSION = "v3.3.6";
-      const APP_DATE = "2025-09-29";
+      const APP_VERSION = "v3.4.0";
+      const APP_DATE = "2025-10-01";
     </script>
 
     <!-- Favicons -->
@@ -1162,6 +1162,11 @@
 
       #measureInfo {
         margin-top: 10px;
+      }
+      #measureInfo .measure-value {
+        color: var(--hud-blue);
+        font-size: 1.08em;
+        font-weight: 600;
       }
 
       @media (max-width: 520px) {
@@ -5333,13 +5338,9 @@
         else map.doubleClickZoom.enable();
 
         if (mode === "distance") {
-          $("measureInfo").innerHTML =
-            "Modus <b>Strecke</b>:<br>Klick fügt Punkt hinzu (max. 20). Drag&Drop möglich, Rechtsklick entfernt. <br>" +
-            "<b>Entfernen</b>: Entfernt den letzten Punkt.<br><b>Löschen</b>: Löscht zuerst die ganze Strecke, dann Fläche (sofern vorhanden).<br><b>Messung beenden</b>: erneut Button <b>Strecke</b> klicken oder ESC.";
+          updateDistance();
         } else if (mode === "area") {
-          $("measureInfo").innerHTML =
-            "Modus <b>Fläche</b>:<br>Klicks fügen Punkte hinzu (Drag&Drop, Rechtsklick entfernt). Polygon schließt automatisch. <br>" +
-            "<b>Entfernen</b>: Entfernt den letzten Punkt.<br><b>Löschen</b>: Löscht zuerst die ganze Fläche, dann alles.<br><b>Messung beenden</b>: erneut Button <b>Fläche</b> klicken oder ESC.";
+          updateArea();
         } else {
           $("measureInfo").innerHTML = "";
         }
@@ -5429,9 +5430,11 @@
         const maxTxt = n === DIST_MAX_POINTS ? " – Maximum erreicht" : "";
         if (n >= 2) {
           if (measureMode === "distance") {
-            $("measureInfo").innerHTML = `<b>Strecke (gesamt):</b> ${fmtDist(
+            $(
+              "measureInfo"
+            ).innerHTML = `<b>Strecke (gesamt):</b> <span class="measure-value">${fmtDist(
               total
-            )}<br><span class="hint">${ptsTxt}${maxTxt}</span>`;
+            )}</span><br><span class="hint">${ptsTxt}${maxTxt}</span>`;
           }
         } else {
           if (measureMode === "distance") {
@@ -5517,20 +5520,24 @@
         if (latlngs.length >= 3) {
           const { area, perimeter } = computeAreaUTM(latlngs);
           if (measureMode === "area") {
-            $("measureInfo").innerHTML = `<b>Fläche:</b> ${fmtArea(
+            $(
+              "measureInfo"
+            ).innerHTML = `<b>Fläche:</b> <span class="measure-value">${fmtArea(
               area
-            )}<br><b>Umfang:</b> ${fmtDist(perimeter)}<br><span class="hint">${
-              latlngs.length
-            } Punkte</span>`;
+            )}</span><br><b>Umfang:</b> <span class="measure-value">${fmtDist(
+              perimeter
+            )}</span><br><span class="hint">${latlngs.length} Punkte</span>`;
           }
         } else {
           let per = 0;
           for (let i = 0; i < latlngs.length - 1; i++)
             per += latlngs[i].distanceTo(latlngs[i + 1]);
           if (measureMode === "area") {
-            $("measureInfo").innerHTML = `<b>Umfang (offen):</b> ${fmtDist(
+            $(
+              "measureInfo"
+            ).innerHTML = `<b>Umfang (offen):</b> <span class="measure-value">${fmtDist(
               per
-            )}<br><span class="hint">${
+            )}</span><br><span class="hint">${
               latlngs.length
             } Punkte – mind. 3 für Fläche</span>`;
           }
