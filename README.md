@@ -40,11 +40,6 @@ Download index.html und die PNG-Dateien und speichere sie in einem Verzeichnis.
 
 MIT License – siehe [LICENSE](LICENSE).
 
-## Screenshot
-
-<img width="1359" height="857" alt="grafik" src="https://github.com/user-attachments/assets/3218a10e-2a42-4abe-9a21-fab4108ebf39" />
-
-
 ---
 ## Autor
 
