@@ -6,7 +6,7 @@
     <title>KoordinatenWerk</title>
 
     <script>
-      const APP_VERSION = "v3.5.3";
+      const APP_VERSION = "v3.6.0";
       const APP_DATE = "2025-10-06";
     </script>
 
@@ -309,6 +309,30 @@
         cursor: not-allowed;
       }
 
+      /* Einheitliches Select-Styling (inkl. Safari) */
+      .card select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        cursor: pointer;
+        padding-right: 36px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23c9d3e0' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 12px 8px;
+      }
+      .card select::-ms-expand {
+        display: none;
+      }
+      .card select:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+      .card select:disabled {
+        cursor: not-allowed;
+        filter: grayscale(0.4);
+      }
+
       /* Hover-/Active für Kopier-Buttons */
       .copybtn:hover:not(:disabled) {
         background: #24324a;
@@ -578,6 +602,44 @@
       .copy-notice.visible {
         display: block;
       }
+      .addr-output {
+        margin-top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .addr-output-label {
+        font-size: 13px;
+        color: #dbe6ff;
+        display: block;
+      }
+      .addr-output-row {
+        align-items: center;
+      }
+      .addr-output-value {
+        font-size: 13px;
+        color: #c9d3e0;
+        line-height: 1.4;
+        word-break: break-word;
+        padding: 0 10px;
+        background: #1b2330;
+        border: 1px solid #3a4354;
+        border-radius: 6px;
+        flex: 1;
+        height: 32px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+      }
+      .addr-output .copybtn {
+        height: 32px;
+        min-height: 32px;
+        width: 40px;
+        min-width: 40px;
+        flex: 0 0 32px;
+        margin-top: 0;
+        margin-bottom: 0;
+      }
       .custom-marker-popup .cm-coord-display {
         display: flex;
         flex-direction: column;
@@ -638,6 +700,20 @@
         fill: none;
         stroke-width: 2;
       }
+      .custom-marker-popup-wrap .leaflet-popup-content-wrapper {
+        background: transparent;
+        box-shadow: none;
+        border: none;
+        padding: 0;
+      }
+      .custom-marker-popup-wrap .leaflet-popup-content {
+        margin: 0;
+        padding: 0;
+      }
+      .custom-marker-popup-wrap .leaflet-popup-tip {
+        background: rgba(17, 24, 34, 0.96);
+        border: 1px solid #2b3446;
+      }
       #customMarkerHint {
         margin-top: 10px;
       }
@@ -646,17 +722,45 @@
         flex-direction: column;
         gap: 8px;
         width: 220px;
+        background: rgba(17, 24, 34, 0.96);
+        padding: 12px;
+        border: 1px solid #2b3446;
+        border-radius: 12px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+        color: #e6efff;
       }
       .custom-marker-popup select,
       .custom-marker-popup textarea,
       .custom-marker-popup input[type="text"] {
         width: 100%;
-        background: #111827;
-        color: #e6efff;
+        background: #1b2430;
+        color: #f1f5ff;
         border: 1px solid #3a4354;
         border-radius: 6px;
-        padding: 6px;
-        font: 13px/1.35 Arial, sans-serif;
+        padding: 6px 8px;
+        font: 13px/1.4 Arial, sans-serif;
+      }
+      .custom-marker-popup select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        cursor: pointer;
+        padding-right: 30px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%23c9d3e0' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 12px 8px;
+      }
+      .custom-marker-popup select::-ms-expand {
+        display: none;
+      }
+      .custom-marker-popup select:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+      .custom-marker-popup select:disabled {
+        cursor: not-allowed;
+        filter: grayscale(0.4);
       }
       .custom-marker-popup .cm-coord-section {
         margin-top: 4px;
@@ -683,7 +787,7 @@
         margin-top: 6px;
       }
       .custom-marker-popup .cm-coord-edit input[type="text"] {
-        background: #0f1622;
+        background: #1b2430;
       }
       .custom-marker-popup .cm-color-row {
         display: flex;
@@ -1774,6 +1878,42 @@
             </button>
           </div>
           <select id="addrResults" style="display: none"></select>
+          <div class="addr-output" id="addrCurrentBox">
+            <label class="addr-output-label" for="addrCurrentValue">
+              Gefundene Adresse
+            </label>
+            <div class="copyrow addr-output-row">
+              <div
+                id="addrCurrentValue"
+                class="addr-output-value"
+                data-state="empty"
+                aria-live="polite"
+              >
+                —
+              </div>
+              <button
+                type="button"
+                id="addrCopy"
+                class="copybtn addr-copy-btn"
+                data-notice="addrCopyNotice"
+                data-copy-message="Adresse kopiert"
+                aria-label="Adresse kopieren"
+                title="Adresse kopieren"
+                disabled
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="9" y="3" width="11" height="14" rx="2"></rect>
+                  <path d="M5 7v12a2 2 0 0 0 2 2h9"></path>
+                </svg>
+              </button>
+            </div>
+            <div
+              id="addrCopyNotice"
+              class="copy-notice"
+              role="status"
+              aria-live="polite"
+            ></div>
+          </div>
         </form>
       </div>
 
@@ -2410,6 +2550,17 @@
               </button>
               <button id="customMarkerClear" type="button">Alle löschen</button>
             </div>
+            <div class="btnrow-3">
+              <button id="customMarkerExport" type="button">Exportieren</button>
+              <button id="customMarkerImport" type="button">Importieren</button>
+              <span></span>
+              <input
+                id="customMarkerImportInput"
+                type="file"
+                accept="application/json"
+                style="display: none"
+              />
+            </div>
 
             <div id="customMarkerHint" class="hint" hidden>
               Modus <b>Marker setzen</b>: Klick in die Karte legt einen neuen
@@ -2778,6 +2929,8 @@
       const customMarkers = new Map(); // id -> { data, marker }
       const reverseGeocodeCache = new Map(); // key -> address string (may be empty)
       const reverseGeocodePending = new Map(); // key -> Promise<string>
+      let primaryAddressKey = null;
+      let primaryAddressToken = 0;
       let customMarkerLayer = null;
       let customMarkerLayerVisible = true;
       let customMarkerMode = false;
@@ -5945,8 +6098,18 @@
         const hasMarkers = hasAny();
         const undoBtn = $("measureUndo");
         const clearBtn = $("measureClear");
-        if (undoBtn) undoBtn.disabled = !hasMarkers;
-        if (clearBtn) clearBtn.disabled = !hasMarkers;
+        if (undoBtn) {
+          undoBtn.disabled = !hasMarkers;
+          undoBtn.title = hasMarkers
+            ? "Letzten Messpunkt entfernen"
+            : "Keine Messpunkte vorhanden";
+        }
+        if (clearBtn) {
+          clearBtn.disabled = !hasMarkers;
+          clearBtn.title = hasMarkers
+            ? "Alle Messpunkte löschen"
+            : "Keine Messpunkte vorhanden";
+        }
       }
 
       function clearMeasureSmart() {
@@ -6532,12 +6695,16 @@
             const withinThreshold =
               Number.isFinite(distance) &&
               distance <= ADDRESS_DISTANCE_THRESHOLD_M;
+            const existing = reverseGeocodeCache.get(key) || "";
             const finalAddress = withinThreshold ? formatted : "";
-            reverseGeocodeCache.set(key, finalAddress);
-            return finalAddress;
+            const resultAddress = finalAddress || existing;
+            reverseGeocodeCache.set(key, resultAddress);
+            return resultAddress;
           })
           .catch((err) => {
             console.warn("Reverse geocoding (Marker) fehlgeschlagen", err);
+            const existing = reverseGeocodeCache.get(key) || "";
+            if (existing) return existing;
             reverseGeocodeCache.set(key, "");
             return "";
           })
@@ -6547,6 +6714,100 @@
 
         reverseGeocodePending.set(key, p);
         return p;
+      }
+
+      function setPrimaryAddressDisplay(state, textOverride) {
+        const valueEl = $("addrCurrentValue");
+        const copyBtn = $("addrCopy");
+        if (!valueEl || !copyBtn) return;
+        let text = typeof textOverride === "string" ? textOverride.trim() : "";
+        if (!text) {
+          if (state === "loading") text = "Adresse wird ermittelt …";
+          else if (state === "failed")
+            text = "Keine Adresse in unmittelbarer Nähe";
+          else text = "—";
+        }
+        valueEl.textContent = text;
+        valueEl.dataset.state = state;
+        if (text && state === "ready") valueEl.title = text;
+        else valueEl.removeAttribute("title");
+        if (state === "ready") {
+          copyBtn.disabled = false;
+          copyBtn.dataset.copyValue = text;
+        } else {
+          copyBtn.disabled = true;
+          copyBtn.dataset.copyValue = "";
+        }
+      }
+
+      function updatePrimaryAddress(lat, lng) {
+        const valueEl = $("addrCurrentValue");
+        if (!valueEl) return;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          primaryAddressKey = null;
+          primaryAddressToken += 1;
+          setPrimaryAddressDisplay("empty");
+          return;
+        }
+        const key = makeAddressCacheKey(lat, lng);
+        if (!key) {
+          primaryAddressKey = null;
+          primaryAddressToken += 1;
+          setPrimaryAddressDisplay("empty");
+          return;
+        }
+
+        const keyChanged = key !== primaryAddressKey;
+        if (!keyChanged && reverseGeocodeCache.has(key)) {
+          const cached = reverseGeocodeCache.get(key) || "";
+          setPrimaryAddressDisplay(cached ? "ready" : "failed", cached);
+          return;
+        }
+
+        if (keyChanged) {
+          primaryAddressToken += 1;
+        }
+        primaryAddressKey = key;
+        const cached = reverseGeocodeCache.has(key)
+          ? reverseGeocodeCache.get(key)
+          : undefined;
+        if (cached !== undefined) {
+          const text = cached || "";
+          setPrimaryAddressDisplay(text ? "ready" : "failed", text);
+          return;
+        }
+
+        const token = ++primaryAddressToken;
+        setPrimaryAddressDisplay("loading");
+
+        fetchReverseGeocode(lat, lng)
+          .then((addr) => {
+            if (token !== primaryAddressToken) return;
+            const formatted = typeof addr === "string" ? addr.trim() : "";
+            if (formatted) {
+              setPrimaryAddressDisplay("ready", formatted);
+            } else {
+              setPrimaryAddressDisplay("failed");
+            }
+          })
+          .catch(() => {
+            if (token !== primaryAddressToken) return;
+            setPrimaryAddressDisplay("failed");
+          });
+      }
+
+      function primePrimaryAddress(lat, lng, text, opts = {}) {
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const key = makeAddressCacheKey(lat, lng);
+        if (!key) return;
+        const clean = typeof text === "string" ? text.trim().slice(0, 240) : "";
+        if (!clean) return;
+        reverseGeocodeCache.set(key, clean);
+        if (opts && opts.updateImmediately) {
+          primaryAddressToken += 1;
+          primaryAddressKey = key;
+          setPrimaryAddressDisplay("ready", clean);
+        }
       }
 
       function updateCustomMarkerPopupAddress(entry, opts = {}) {
@@ -6755,13 +7016,181 @@
         const extraHtml = extraText ? `<br>${extraText}` : "";
         hint.innerHTML = `${base}<br>${countText}${extraHtml}`;
         const clearBtn = $("customMarkerClear");
-        if (clearBtn) clearBtn.disabled = count === 0;
+        if (clearBtn) {
+          const hasMarkers = count > 0;
+          clearBtn.disabled = !hasMarkers;
+          clearBtn.title = hasMarkers
+            ? "Alle eigenen Marker entfernen"
+            : "Keine Marker vorhanden";
+        }
         const visibilityBtn = $("customMarkerVisibility");
         if (visibilityBtn) {
           const hasMarkers = count > 0;
           visibilityBtn.disabled = !hasMarkers;
           visibilityBtn.title = hasMarkers ? "" : "Keine Marker vorhanden";
         }
+        const exportBtn = $("customMarkerExport");
+        if (exportBtn) {
+          const hasMarkers = count > 0;
+          exportBtn.disabled = !hasMarkers;
+          exportBtn.title = hasMarkers
+            ? "Eigene Marker als JSON exportieren"
+            : "Keine Marker vorhanden";
+        }
+      }
+
+      function collectCustomMarkerPayload() {
+        return Array.from(customMarkers.values()).map((entry) => ({
+          id: entry.data.id,
+          lat: entry.data.lat,
+          lng: entry.data.lng,
+          text: entry.data.text || "",
+          label: (entry.data.label || "").slice(0, 30),
+          type: entry.data.type || "custom",
+          showTooltip: !!entry.data.showTooltip,
+          color: sanitizeHexColor(entry.data.color) || "",
+          hazardCategory:
+            typeof entry.data.hazardCategory === "string"
+              ? entry.data.hazardCategory
+              : "",
+          damageCategory:
+            typeof entry.data.damageCategory === "string"
+              ? entry.data.damageCategory
+              : "",
+          address:
+            typeof entry.data.address === "string"
+              ? entry.data.address.trim().slice(0, 240)
+              : "",
+        }));
+      }
+
+      function exportCustomMarkersToFile() {
+        try {
+          const markers = collectCustomMarkerPayload();
+          const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            mission: {
+              name: missionData.name,
+              lead: missionData.lead,
+              section: missionData.section,
+              enterSection: missionData.enterSection,
+            },
+            markers,
+          };
+          const json = JSON.stringify(payload, null, 2);
+          const blob = new Blob([json], {
+            type: "application/json",
+          });
+          const stamp = new Date()
+            .toISOString()
+            .replace(/[:.]/g, "-")
+            .replace(/Z$/, "Z");
+          const filename = `kw-custom-marker-export-${stamp}.json`;
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          updateCustomMarkerHint(
+            `Export abgeschlossen (${markers.length} Marker, Datei: ${filename}).`
+          );
+        } catch (err) {
+          console.error("Export der Custom Marker fehlgeschlagen", err);
+          updateCustomMarkerHint(
+            "Export fehlgeschlagen – Details siehe Konsole."
+          );
+        }
+      }
+
+      function applyImportedMission(mission = {}) {
+        if (!mission || typeof mission !== "object") return;
+        const fields = {
+          name: "missionName",
+          lead: "missionLead",
+          section: "missionSection",
+          enterSection: "missionEnterSection",
+        };
+        Object.keys(fields).forEach((key) => {
+          if (typeof mission[key] === "string") {
+            setMissionValue(key, mission[key]);
+            const input = $(fields[key]);
+            if (input) input.value = mission[key];
+          }
+        });
+      }
+
+      function importCustomMarkersFromData(data) {
+        if (!data || typeof data !== "object")
+          throw new Error("Ungültiger Import (kein Objekt)");
+        const markers = Array.isArray(data.markers) ? data.markers : [];
+        const toCreate = markers
+          .map((item) => ({
+            id: String(item?.id || "").trim(),
+            lat: Number(item?.lat),
+            lng: Number(item?.lng),
+            text: typeof item?.text === "string" ? item.text : "",
+            label:
+              typeof item?.label === "string" ? item.label.slice(0, 30) : "",
+            type: CUSTOM_MARKER_TYPE_MAP[item?.type] ? item.type : "custom",
+            showTooltip: !!item?.showTooltip,
+            color: sanitizeHexColor(item?.color) || "",
+            hazardCategory:
+              typeof item?.hazardCategory === "string"
+                ? item.hazardCategory
+                : "",
+            damageCategory:
+              typeof item?.damageCategory === "string"
+                ? item.damageCategory
+                : "",
+            address:
+              typeof item?.address === "string"
+                ? item.address.trim().slice(0, 240)
+                : "",
+          }))
+          .filter(
+            (item) =>
+              !Number.isNaN(item.lat) &&
+              !Number.isNaN(item.lng) &&
+              Number.isFinite(item.lat) &&
+              Number.isFinite(item.lng)
+          );
+
+        clearCustomMarkers();
+        toCreate.forEach((rec) => {
+          instantiateCustomMarker(rec, { persist: false });
+        });
+        writeStoredCustomMarkers();
+        updateCustomMarkerHint(
+          `Import abgeschlossen (${toCreate.length} Marker übernommen).`
+        );
+        applyImportedMission(data.mission || {});
+      }
+
+      function handleCustomMarkerImportFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const text = String(reader.result || "");
+            const parsed = JSON.parse(text);
+            importCustomMarkersFromData(parsed);
+          } catch (err) {
+            console.error("Import der Custom Marker fehlgeschlagen", err);
+            updateCustomMarkerHint(
+              "Import fehlgeschlagen – ungültige Datei oder Fehler in der Konsole prüfen."
+            );
+          }
+        };
+        reader.onerror = () => {
+          updateCustomMarkerHint(
+            "Import fehlgeschlagen – Datei konnte nicht gelesen werden."
+          );
+        };
+        reader.readAsText(file);
       }
 
       function setMissionValue(key, value) {
@@ -7968,6 +8397,7 @@
         setMGRSFieldsFromLatLng(lat, lng);
         if ($("gridType").value !== "none") updateGrid();
         updateCoordHUD({ lat, lng });
+        updatePrimaryAddress(lat, lng);
       }
 
       async function doSearch() {
@@ -7998,12 +8428,27 @@
           sel.innerHTML = data
             .map((d, i) => `<option value="${i}">${d.display_name}</option>`)
             .join("");
-          sel.onchange = () => {
-            const d = data[Number(sel.value)];
-            if (d) setLatLng(parseFloat(d.lat), parseFloat(d.lon), "addr");
+          const applyResult = (idx) => {
+            const d = data[idx];
+            if (!d) return;
+            const lat = Number.parseFloat(d.lat);
+            const lon = Number.parseFloat(d.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+            const formatted =
+              formatReverseGeocodeAddress(d).trim() ||
+              (typeof d.display_name === "string" ? d.display_name.trim() : "");
+            if (formatted)
+              primePrimaryAddress(lat, lon, formatted, {
+                updateImmediately: true,
+              });
+            setLatLng(lat, lon, "addr");
           };
-          const first = data[0];
-          setLatLng(parseFloat(first.lat), parseFloat(first.lon), "addr");
+          sel.onchange = () => {
+            const idx = Number(sel.value);
+            if (!Number.isNaN(idx)) applyResult(idx);
+          };
+          sel.value = "0";
+          applyResult(0);
         } catch (e) {
           console.warn("Geocoding fehlgeschlagen", e);
           hint.textContent =
@@ -8377,6 +8822,31 @@
             map.panTo(ll, { animate: true });
           }
         });
+        const addrCopyBtn = $("addrCopy");
+        if (addrCopyBtn) {
+          addrCopyBtn.addEventListener("click", () => {
+            const value = addrCopyBtn.dataset.copyValue || "";
+            if (!value) return;
+            copyText(value, addrCopyBtn);
+          });
+        }
+
+        const exportBtn = $("customMarkerExport");
+        if (exportBtn) {
+          exportBtn.addEventListener("click", exportCustomMarkersToFile);
+        }
+        const importBtn = $("customMarkerImport");
+        const importInput = $("customMarkerImportInput");
+        if (importBtn && importInput) {
+          importBtn.addEventListener("click", () => {
+            importInput.value = "";
+            importInput.click();
+          });
+          importInput.addEventListener("change", () => {
+            const file = importInput.files && importInput.files[0];
+            if (file) handleCustomMarkerImportFile(file);
+          });
+        }
 
         // Overlay-Checkboxen → Live-HUD sofort aktualisieren
         try {
