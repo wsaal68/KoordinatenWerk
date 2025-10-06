@@ -6,8 +6,8 @@
     <title>KoordinatenWerk</title>
 
     <script>
-      const APP_VERSION = "v3.5.2";
-      const APP_DATE = "2025-10-02";
+      const APP_VERSION = "v3.5.3";
+      const APP_DATE = "2025-10-06";
     </script>
 
     <!-- Favicons -->
@@ -590,12 +590,19 @@
         align-items: center;
         gap: 6px;
       }
+      .custom-marker-popup .cm-address-row {
+        align-items: flex-start;
+      }
       .custom-marker-popup .cm-coord-row b {
         flex: 0 0 auto;
       }
       .custom-marker-popup .cm-coord-value {
         flex: 1;
         white-space: nowrap;
+      }
+      .custom-marker-popup .cm-address-row .cm-coord-value {
+        white-space: normal;
+        word-break: break-word;
       }
       .custom-marker-popup .cm-copy-btn {
         background: transparent;
@@ -2769,6 +2776,8 @@
       let prevZoom = null;
       const CUSTOM_MARKER_STORAGE_KEY = "kwCustomMarkers";
       const customMarkers = new Map(); // id -> { data, marker }
+      const reverseGeocodeCache = new Map(); // key -> address string (may be empty)
+      const reverseGeocodePending = new Map(); // key -> Promise<string>
       let customMarkerLayer = null;
       let customMarkerLayerVisible = true;
       let customMarkerMode = false;
@@ -6161,6 +6170,10 @@
                   typeof item?.damageCategory === "string"
                     ? item.damageCategory
                     : "",
+                address:
+                  typeof item?.address === "string"
+                    ? item.address.trim().slice(0, 240)
+                    : "",
               };
             })
             .filter(
@@ -6192,6 +6205,10 @@
             damageCategory:
               typeof entry.data.damageCategory === "string"
                 ? entry.data.damageCategory
+                : "",
+            address:
+              typeof entry.data.address === "string"
+                ? entry.data.address.trim().slice(0, 240)
                 : "",
           }));
           window.localStorage.setItem(
@@ -6389,6 +6406,253 @@
         return null;
       }
 
+      const ADDRESS_PRECISION = 6;
+      const ADDRESS_DISTANCE_THRESHOLD_M = 60; // max distance between marker and reverse result
+
+      function toRadians(deg) {
+        return (deg * Math.PI) / 180;
+      }
+
+      function geoDistanceMeters(lat1, lng1, lat2, lng2) {
+        if (
+          !Number.isFinite(lat1) ||
+          !Number.isFinite(lng1) ||
+          !Number.isFinite(lat2) ||
+          !Number.isFinite(lng2)
+        )
+          return Number.POSITIVE_INFINITY;
+        const R = 6371000; // meters
+        const dLat = toRadians(lat2 - lat1);
+        const dLng = toRadians(lng2 - lng1);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRadians(lat1)) *
+            Math.cos(toRadians(lat2)) *
+            Math.sin(dLng / 2) *
+            Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
+
+      function makeAddressCacheKey(lat, lng) {
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return `${lat.toFixed(ADDRESS_PRECISION)},${lng.toFixed(
+          ADDRESS_PRECISION
+        )}`;
+      }
+
+      function selectAddressField(addr, fields) {
+        if (!addr) return "";
+        for (const name of fields) {
+          if (addr[name]) return addr[name];
+        }
+        return "";
+      }
+
+      function formatReverseGeocodeAddress(payload) {
+        if (!payload || typeof payload !== "object") return "";
+        const addr = payload.address || {};
+        const street = selectAddressField(addr, [
+          "road",
+          "pedestrian",
+          "footway",
+          "cycleway",
+          "street",
+          "residential",
+          "path",
+          "service",
+          "neighbourhood",
+          "suburb",
+        ]);
+        const houseNo = addr.house_number || addr.housenumber || "";
+        const firstLineParts = [];
+        if (street) firstLineParts.push(street);
+        if (houseNo) firstLineParts.push(houseNo);
+
+        const locality = selectAddressField(addr, [
+          "city",
+          "town",
+          "village",
+          "municipality",
+          "county",
+        ]);
+        const secondLineParts = [];
+        if (addr.postcode) secondLineParts.push(addr.postcode);
+        if (locality) secondLineParts.push(locality);
+
+        const pieces = [];
+        if (firstLineParts.length) pieces.push(firstLineParts.join(" "));
+        if (secondLineParts.length) pieces.push(secondLineParts.join(" "));
+
+        if (!pieces.length) {
+          const fallback =
+            typeof payload.display_name === "string"
+              ? payload.display_name
+              : selectAddressField(addr, [
+                  "state",
+                  "region",
+                  "country",
+                  "country_code",
+                ]);
+          if (fallback) pieces.push(fallback);
+        }
+
+        return pieces.join(", ");
+      }
+
+      function fetchReverseGeocode(lat, lng) {
+        const key = makeAddressCacheKey(lat, lng);
+        if (!key) return Promise.resolve("");
+        if (reverseGeocodeCache.has(key))
+          return Promise.resolve(reverseGeocodeCache.get(key));
+        if (reverseGeocodePending.has(key))
+          return reverseGeocodePending.get(key);
+
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(
+          lat
+        )}&lon=${encodeURIComponent(lng)}&addressdetails=1`;
+        const p = fetch(url, {
+          headers: {
+            "Accept-Language": "de",
+          },
+        })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error(`Reverse geocoding failed (${res.status})`);
+            }
+            return res.json();
+          })
+          .then((data) => {
+            const formatted = formatReverseGeocodeAddress(data).trim();
+            const resLat = Number.parseFloat(data?.lat);
+            const resLng = Number.parseFloat(
+              data?.lon !== undefined ? data.lon : data?.lng
+            );
+            const distance = geoDistanceMeters(lat, lng, resLat, resLng);
+            const withinThreshold =
+              Number.isFinite(distance) &&
+              distance <= ADDRESS_DISTANCE_THRESHOLD_M;
+            const finalAddress = withinThreshold ? formatted : "";
+            reverseGeocodeCache.set(key, finalAddress);
+            return finalAddress;
+          })
+          .catch((err) => {
+            console.warn("Reverse geocoding (Marker) fehlgeschlagen", err);
+            reverseGeocodeCache.set(key, "");
+            return "";
+          })
+          .finally(() => {
+            reverseGeocodePending.delete(key);
+          });
+
+        reverseGeocodePending.set(key, p);
+        return p;
+      }
+
+      function updateCustomMarkerPopupAddress(entry, opts = {}) {
+        if (!entry) return;
+        const popup = entry.marker?.getPopup?.();
+        let root = opts.root;
+        if (!root) {
+          const content = popup?.getContent?.();
+          if (content && typeof content.querySelector === "function")
+            root = content;
+        }
+        if (!root || typeof root.querySelector !== "function") return;
+
+        const displayEl = root.querySelector(
+          '[data-role="cm-address-display"]'
+        );
+        if (!displayEl) return;
+        const copyBtn = root.querySelector('[data-role="cm-address-copy"]');
+
+        let state = "empty";
+        let text = "—";
+        if (opts.loading) {
+          state = "loading";
+          text = "Adresse wird ermittelt …";
+        } else {
+          const addr = (entry.data.address || "").trim();
+          if (addr) {
+            state = "ready";
+            text = addr;
+          } else if (opts.failed) {
+            state = "failed";
+            text = "Keine Adresse ermittelbar";
+          }
+        }
+
+        displayEl.textContent = text;
+        displayEl.dataset.state = state;
+
+        if (copyBtn) {
+          const addr = (entry.data.address || "").trim();
+          if (state === "ready" && addr) {
+            copyBtn.disabled = false;
+            copyBtn.dataset.copyValue = addr;
+          } else {
+            copyBtn.disabled = true;
+            copyBtn.dataset.copyValue = "";
+          }
+        }
+      }
+
+      function ensureCustomMarkerAddress(entry, opts = {}) {
+        if (!entry || !entry.data) return;
+        const lat = entry.data.lat;
+        const lng = entry.data.lng;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const root = opts.root;
+        const key = makeAddressCacheKey(lat, lng);
+        if (!key) return;
+
+        entry.addressCacheKey = key;
+
+        const stored = (entry.data.address || "").trim();
+        if (stored) {
+          reverseGeocodeCache.set(key, stored);
+          updateCustomMarkerPopupAddress(entry, { root });
+          return;
+        }
+
+        if (reverseGeocodeCache.has(key)) {
+          const cached = reverseGeocodeCache.get(key) || "";
+          entry.data.address = cached;
+          updateCustomMarkerPopupAddress(entry, {
+            root,
+            failed: !cached,
+          });
+          if (cached) writeStoredCustomMarkers();
+          return;
+        }
+
+        updateCustomMarkerPopupAddress(entry, { root, loading: true });
+
+        fetchReverseGeocode(lat, lng)
+          .then((addr) => {
+            const latestKey = makeAddressCacheKey(
+              entry.data.lat,
+              entry.data.lng
+            );
+            if (latestKey !== key) return;
+            entry.data.address = addr || "";
+            updateCustomMarkerPopupAddress(entry, {
+              root,
+              failed: !addr,
+            });
+            if (addr) writeStoredCustomMarkers();
+          })
+          .catch(() => {
+            const latestKey = makeAddressCacheKey(
+              entry.data.lat,
+              entry.data.lng
+            );
+            if (latestKey !== key) return;
+            entry.data.address = "";
+            updateCustomMarkerPopupAddress(entry, { root, failed: true });
+          });
+      }
+
       function updateCustomMarkerPopupCoords(entry, opts = {}) {
         if (!entry) return;
         const popup = entry.marker?.getPopup?.();
@@ -6439,8 +6703,24 @@
       function setCustomMarkerLatLng(entry, lat, lng, source = "manual") {
         if (!entry || !entry.marker) return;
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const prevLat = entry.data.lat;
+        const prevLng = entry.data.lng;
+        const oldCacheKey = makeAddressCacheKey(prevLat, prevLng);
+        const coordsChanged =
+          !Number.isFinite(prevLat) ||
+          !Number.isFinite(prevLng) ||
+          Math.abs(prevLat - lat) > 1e-8 ||
+          Math.abs(prevLng - lng) > 1e-8;
         entry.data.lat = lat;
         entry.data.lng = lng;
+        const cacheKey = makeAddressCacheKey(lat, lng);
+        if (coordsChanged) {
+          entry.data.address = "";
+          if (oldCacheKey && oldCacheKey !== cacheKey)
+            reverseGeocodeCache.delete(oldCacheKey);
+          if (cacheKey) reverseGeocodeCache.delete(cacheKey);
+        }
+        if (cacheKey) entry.addressCacheKey = cacheKey;
         if (source !== "drag") {
           try {
             entry.marker.setLatLng([lat, lng]);
@@ -6451,6 +6731,10 @@
         writeStoredCustomMarkers();
         updateCustomMarkerHint();
         updateCustomMarkerPopupCoords(entry);
+        updateCustomMarkerPopupAddress(entry);
+        if (coordsChanged && entry.marker?.isPopupOpen?.()) {
+          ensureCustomMarkerAddress(entry);
+        }
       }
 
       function updateCustomMarkerHint(extra) {
@@ -6849,6 +7133,35 @@
         mgrsRow.appendChild(mgrsCopyBtn);
         coordsDisplay.appendChild(mgrsRow);
 
+        const addrRow = document.createElement("div");
+        addrRow.className = "cm-coord-row cm-address-row";
+        const addrLabelEl = document.createElement("b");
+        addrLabelEl.textContent = "Adresse:";
+        addrRow.appendChild(addrLabelEl);
+        const addrValueEl = document.createElement("span");
+        addrValueEl.className = "cm-coord-value";
+        addrValueEl.dataset.role = "cm-address-display";
+        addrValueEl.textContent = "—";
+        addrRow.appendChild(addrValueEl);
+        const addrCopyBtn = document.createElement("button");
+        addrCopyBtn.type = "button";
+        addrCopyBtn.className = "cm-copy-btn";
+        addrCopyBtn.dataset.role = "cm-address-copy";
+        addrCopyBtn.dataset.notice = coordNoticeId;
+        addrCopyBtn.dataset.copyMessage = "Adresse kopiert";
+        addrCopyBtn.setAttribute("aria-label", "Adresse kopieren");
+        addrCopyBtn.title = "Adresse kopieren";
+        addrCopyBtn.innerHTML =
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="11" height="14" rx="2"></rect><path d="M5 7v12a2 2 0 0 0 2 2h9"></path></svg>';
+        addrCopyBtn.disabled = true;
+        addrCopyBtn.addEventListener("click", () => {
+          const value = addrCopyBtn.dataset.copyValue || "";
+          if (!value) return;
+          copyText(value, addrCopyBtn);
+        });
+        addrRow.appendChild(addrCopyBtn);
+        coordsDisplay.appendChild(addrRow);
+
         coordSection.appendChild(coordsDisplay);
 
         const coordNotice = document.createElement("div");
@@ -6996,6 +7309,8 @@
             clearCoordError();
             setCustomMarkerLatLng(entry, latLng.lat, latLng.lng, "utm-input");
             updateCustomMarkerPopupCoords(entry, { root: container });
+            updateCustomMarkerPopupAddress(entry, { root: container });
+            ensureCustomMarkerAddress(entry, { root: container });
           } finally {
             isSyncingCoords = false;
           }
@@ -7023,6 +7338,8 @@
             clearCoordError();
             setCustomMarkerLatLng(entry, latLng.lat, latLng.lng, "mgrs-input");
             updateCustomMarkerPopupCoords(entry, { root: container });
+            updateCustomMarkerPopupAddress(entry, { root: container });
+            ensureCustomMarkerAddress(entry, { root: container });
           } finally {
             isSyncingCoords = false;
           }
@@ -7083,6 +7400,8 @@
         });
 
         updateCustomMarkerPopupCoords(entry, { root: container });
+        updateCustomMarkerPopupAddress(entry, { root: container });
+        ensureCustomMarkerAddress(entry, { root: container });
 
         if (mgrsReady && typeof mgrsReady.then === "function") {
           mgrsReady
@@ -7090,6 +7409,7 @@
               if (coordCheckbox.checked) {
                 ensureMgrsInputState();
                 updateCustomMarkerPopupCoords(entry, { root: container });
+                updateCustomMarkerPopupAddress(entry, { root: container });
               }
             })
             .catch(() => {});
@@ -7302,6 +7622,10 @@
             typeof record.damageCategory === "string"
               ? record.damageCategory
               : "",
+          address:
+            typeof record.address === "string"
+              ? record.address.trim().slice(0, 240)
+              : "",
         };
         if (Number.isNaN(data.lat) || Number.isNaN(data.lng)) return null;
 
@@ -7311,6 +7635,10 @@
           autoPan: true,
         });
         const entry = { data, marker: leafletMarker };
+        entry.addressCacheKey = makeAddressCacheKey(data.lat, data.lng);
+        if (entry.addressCacheKey && data.address) {
+          reverseGeocodeCache.set(entry.addressCacheKey, data.address);
+        }
         customMarkers.set(data.id, entry);
 
         leafletMarker.bindPopup("", {
@@ -7691,7 +8019,8 @@
         if (!noticeId) return;
         const notice = document.getElementById(noticeId);
         if (!notice) return;
-        notice.textContent = "Koordinate kopiert";
+        const msg = btn?.dataset?.copyMessage || "Koordinate kopiert";
+        notice.textContent = msg;
         notice.classList.add("visible");
         if (notice._copyTimer) {
           clearTimeout(notice._copyTimer);
