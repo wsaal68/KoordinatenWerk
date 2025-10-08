@@ -50,6 +50,11 @@
     <!-- proj4 (UTM via +proj-Strings) -->
     <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
 
+    <!-- jsPDF für PDF-Export der Markerlisten -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <!-- html2canvas für Karten-Screenshots im PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
     <style>
       :root {
         --panel-w: 460px;
@@ -104,6 +109,9 @@
       body.panel-collapsed .panel {
         transform: translateX(calc(-100% + 6px));
         margin-right: calc(-1 * (var(--panel-w) - 6px));
+      }
+      body.custom-marker-overlay-open {
+        overflow: hidden;
       }
       #panelToggle {
         position: fixed;
@@ -474,6 +482,273 @@
       .section-box .btnrow-3 {
         margin-top: 0;
       }
+
+      .custom-marker-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        background: rgba(8, 12, 20, 0.72);
+        backdrop-filter: blur(4px);
+        z-index: 15000;
+      }
+      .custom-marker-overlay[hidden] {
+        display: none;
+      }
+      .custom-marker-overlay-card {
+        position: relative;
+        width: min(860px, 100%);
+        max-height: calc(100vh - 120px);
+        background: #121821;
+        border: 1px solid #2b3446;
+        border-radius: 12px;
+        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .custom-marker-overlay-header {
+        padding: 22px 28px 12px 28px;
+        border-bottom: 1px solid #2b3446;
+      }
+      .custom-marker-overlay-header h2 {
+        font-size: 20px;
+        margin-bottom: 6px;
+        color: #fff;
+      }
+      .custom-marker-overlay-meta {
+        color: #9eb6d9;
+        font-size: 12px;
+        line-height: 1.4;
+        white-space: normal;
+        flex: 1 1 auto;
+        text-align: left;
+      }
+      .custom-marker-overlay-body {
+        padding: 16px 28px 24px 28px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      #customMarkerOverlayTable {
+        overflow-x: auto;
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      .custom-marker-overlay-body table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .custom-marker-overlay-body th {
+        text-align: left;
+        font-weight: 600;
+        color: #9eb6d9;
+        font-size: 12px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        padding: 0 12px 10px 0;
+        border-bottom: 1px solid #2b3446;
+      }
+      .custom-marker-overlay-body td {
+        padding: 12px 12px 12px 0;
+        border-bottom: 1px solid #1c2535;
+        vertical-align: top;
+        font-size: 13px;
+        color: #d5e1f5;
+      }
+      .custom-marker-overlay-body td:last-child,
+      .custom-marker-overlay-body th:last-child {
+        padding-right: 0;
+      }
+      .custom-marker-overlay-body tbody tr:hover {
+        background: rgba(24, 33, 48, 0.65);
+      }
+      .custom-marker-overlay-empty {
+        padding: 30px 0;
+        text-align: center;
+        font-size: 14px;
+        color: #9eb6d9;
+      }
+      .custom-marker-overlay-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        padding: 16px 28px 20px 28px;
+        border-top: 1px solid #2b3446;
+        background: rgba(15, 22, 38, 0.8);
+      }
+      .custom-marker-overlay-actions {
+        display: flex;
+        gap: 12px;
+        flex: 0 0 auto;
+      }
+      .custom-marker-overlay-footer button {
+        min-width: 140px;
+        padding: 10px 18px;
+        border-radius: 6px;
+        border: 1px solid #3a4354;
+        background: #1b2430;
+        color: #fff;
+        font: 500 13px/1.2 Arial, sans-serif;
+        cursor: pointer;
+        transition: background-color 0.15s ease, transform 0.12s ease,
+          filter 0.15s ease, box-shadow 0.15s ease, outline-color 0.1s ease,
+          color 0.15s ease;
+        min-height: var(--ctl-h);
+      }
+      .custom-marker-overlay-footer button:hover:not(:disabled) {
+        background: #223045;
+        color: #8fb4ff;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+        filter: brightness(1.15);
+      }
+      .custom-marker-overlay-footer button:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
+        filter: brightness(0.98);
+      }
+      .custom-marker-overlay-footer button:focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+      }
+      .custom-marker-overlay-footer button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+        filter: none;
+        transform: none;
+      }
+      .custom-marker-overlay-mission {
+        display: grid;
+        gap: 6px;
+        padding: 16px 28px 0 28px;
+        font-size: 13px;
+        color: #d5e1f5;
+        text-align: left;
+      }
+      .custom-marker-overlay-mission strong {
+        color: #8fb4ff;
+      }
+      .custom-marker-overlay-mission .mission-overlay-description {
+        display: grid;
+        gap: 4px;
+      }
+      .custom-marker-overlay-mission .mission-overlay-description-text {
+        color: #9eb6d9;
+        text-align: left;
+      }
+      .custom-marker-overlay-mission .mission-overlay-description strong {
+        display: block;
+      }
+      .custom-marker-overlay-marker {
+        display: grid;
+        gap: 4px;
+      }
+      .custom-marker-overlay-marker .name {
+        font-weight: 600;
+        color: #ffffff;
+      }
+      .custom-marker-overlay-marker .type {
+        font-size: 12px;
+        color: #9eb6d9;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .custom-marker-overlay-marker .color-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        display: inline-block;
+      }
+      .custom-marker-overlay-details {
+        display: grid;
+        gap: 6px;
+      }
+      .custom-marker-overlay-details strong {
+        color: #8fb4ff;
+      }
+      .custom-marker-overlay-coords {
+        display: grid;
+        gap: 4px;
+        font-size: 12px;
+        color: #9eb6d9;
+      }
+
+      @media (max-width: 900px) {
+        .custom-marker-overlay {
+          padding: 20px;
+        }
+        .custom-marker-overlay-card {
+          max-height: calc(100vh - 60px);
+        }
+        .custom-marker-overlay-footer {
+          flex-direction: column-reverse;
+          align-items: stretch;
+        }
+        .custom-marker-overlay-footer button {
+          width: 100%;
+        }
+      }
+
+      @media print {
+        body.custom-marker-overlay-open {
+          background: #fff !important;
+          color: #000 !important;
+        }
+        body.custom-marker-overlay-open .panel,
+        body.custom-marker-overlay-open #panelToggle,
+        body.custom-marker-overlay-open #map,
+        body.custom-marker-overlay-open .leaflet-control-container,
+        body.custom-marker-overlay-open .leaflet-pane {
+          display: none !important;
+        }
+        body.custom-marker-overlay-open #customMarkerOverlay {
+          position: static;
+          display: block !important;
+          background: none;
+          padding: 0;
+          backdrop-filter: none;
+        }
+        body.custom-marker-overlay-open .custom-marker-overlay-card {
+          width: 100%;
+          max-height: none;
+          border: none;
+          border-radius: 0;
+          box-shadow: none;
+          background: #fff;
+          color: #000;
+        }
+        body.custom-marker-overlay-open .custom-marker-overlay-header,
+        body.custom-marker-overlay-open .custom-marker-overlay-body,
+        body.custom-marker-overlay-open .custom-marker-overlay-footer {
+          padding: 16px 0;
+          border: none;
+          background: transparent;
+        }
+        body.custom-marker-overlay-open .custom-marker-overlay-body th,
+        body.custom-marker-overlay-open .custom-marker-overlay-body td {
+          color: #000;
+          border-color: rgba(0, 0, 0, 0.2);
+        }
+        body.custom-marker-overlay-open
+          .custom-marker-overlay-body
+          tbody
+          tr:hover {
+          background: transparent;
+        }
+        body.custom-marker-overlay-open .custom-marker-overlay-footer button {
+          display: none;
+        }
+      }
       .mission-fields {
         background: #101722;
         border: 1px solid #2b3446;
@@ -486,6 +761,87 @@
       }
       .mission-fields .mission-row {
         margin-top: 0;
+      }
+      .mission-fields .mission-row + .mission-row,
+      .mission-fields .mission-row + .mission-limit-hint,
+      .mission-fields .mission-limit-hint + .mission-row {
+        margin-top: 6px;
+      }
+      .mission-fields .mission-limit-hint + .mission-row-textarea,
+      .mission-fields .mission-row-textarea {
+        margin-top: 6px;
+      }
+      .mission-fields input,
+      .mission-fields textarea {
+        font: 13px/1.4 Arial, sans-serif;
+      }
+      .mission-fields textarea {
+        width: 100%;
+        min-height: 5em;
+        resize: vertical;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #3a4354;
+        background: #1b2430;
+        color: #fff;
+      }
+      .mission-row-textarea {
+        align-items: flex-start;
+      }
+      .mission-row-textarea textarea {
+        flex: 1 1 auto;
+      }
+      .mission-row-textarea .mission-clear {
+        margin-top: 0;
+        align-self: flex-start;
+      }
+      .mission-textarea-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-left: 8px;
+      }
+      .mission-row-textarea .mission-action-btn {
+        align-self: flex-start;
+        min-width: var(--ctl-h);
+        width: var(--ctl-h);
+        height: var(--ctl-h);
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #1b2430;
+        --mission-desc-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 4l16 16M3.5 11.5c.8-1.9 4.3-6.5 8.5-6.5 1.7 0 3.2.7 4.5 1.7' stroke='%23f5f8ff' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M20.5 12.5c-.8 1.9-4.3 6.5-8.5 6.5-1.5 0-2.9-.6-4.1-1.4' stroke='%23f5f8ff' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+        transition: background-color 0.12s ease;
+      }
+      .mission-row-textarea .mission-action-btn::before {
+        content: "";
+        display: block;
+        width: 18px;
+        height: 18px;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        background-image: var(--mission-desc-icon);
+        transition: transform 0.12s ease;
+      }
+      .mission-row-textarea .mission-action-btn:hover:not(:disabled) {
+        background-color: #223045;
+        filter: brightness(1.1);
+      }
+      .mission-row-textarea .mission-action-btn:hover:not(:disabled)::before {
+        transform: scale(1.05);
+      }
+      .mission-row-textarea .mission-action-btn.toggle-on {
+        --mission-desc-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5c5.5 0 10 4.5 10 7s-4.5 7-10 7S2 14.5 2 12 6.5 5 12 5z' stroke='%238fb4ff' stroke-width='1.8' fill='none'/%3E%3Ccircle cx='12' cy='12' r='3.5' fill='%238fb4ff'/%3E%3C/svg%3E");
+      }
+      .mission-fields .mission-limit-hint {
+        font-size: 11px;
+        color: #f5c97a;
+        margin: 2px 0 4px 2px;
+      }
+      .mission-fields .mission-limit-hint[hidden] {
+        display: none;
       }
       .tabbox {
         display: grid;
@@ -993,7 +1349,7 @@
       .custom-marker-icon {
         border: none;
         background: none;
-        transition: transform 0.12s ease;
+        transition: none;
       }
       .custom-marker-icon.svg-marker-icon .svg-marker-wrapper {
         width: 64px;
@@ -1462,6 +1818,30 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
         white-space: pre-line;
         pointer-events: none;
+      }
+      .mission-description-overlay {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1499;
+        max-width: min(90vw, 720px);
+        min-width: 320px;
+        background: rgba(15, 22, 34, 0.92);
+        color: #f5f8ff;
+        border: 1px solid rgba(143, 180, 255, 0.65);
+        border-radius: 10px;
+        padding: 10px 20px;
+        font: 13px/1.45 Arial, sans-serif;
+        text-align: center;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+        white-space: pre-line;
+        pointer-events: none;
+        max-height: 26vh;
+        overflow-y: auto;
+      }
+      .mission-description-overlay[hidden] {
+        display: none;
       }
 
       #measureInfo {
@@ -2550,10 +2930,11 @@
               </button>
               <button id="customMarkerClear" type="button">Alle löschen</button>
             </div>
-            <div class="btnrow-3">
+            <div class="btnrow">
               <button id="customMarkerExport" type="button">Exportieren</button>
               <button id="customMarkerImport" type="button">Importieren</button>
-              <span></span>
+              <button id="customMarkerCenter" type="button">Zentrieren</button>
+              <button id="customMarkerList" type="button">Liste</button>
               <input
                 id="customMarkerImportInput"
                 type="file"
@@ -2616,6 +2997,7 @@
                 placeholder="Bezeichnung des Einsatzes"
                 autocomplete="off"
                 aria-label="Einsatzbezeichnung"
+                maxlength="80"
               />
               <button
                 id="missionClear"
@@ -2627,6 +3009,9 @@
                 &times;
               </button>
             </div>
+            <div id="missionTextHint" class="mission-limit-hint" hidden>
+              Maximale Länge (80 Zeichen) erreicht.
+            </div>
             <div class="mission-row">
               <input
                 id="missionLead"
@@ -2634,6 +3019,7 @@
                 placeholder="Einsatzleitung"
                 autocomplete="off"
                 aria-label="Einsatzleitung"
+                maxlength="35"
               />
               <button
                 id="missionLeadClear"
@@ -2645,6 +3031,9 @@
                 &times;
               </button>
             </div>
+            <div id="missionLeadHint" class="mission-limit-hint" hidden>
+              Maximale Länge (35 Zeichen) erreicht.
+            </div>
             <div class="mission-row">
               <input
                 id="missionSection"
@@ -2652,6 +3041,7 @@
                 placeholder="Einsatzabschnittsleitung"
                 autocomplete="off"
                 aria-label="Einsatzabschnittsleitung"
+                maxlength="35"
               />
               <button
                 id="missionSectionClear"
@@ -2663,6 +3053,9 @@
                 &times;
               </button>
             </div>
+            <div id="missionSectionHint" class="mission-limit-hint" hidden>
+              Maximale Länge (35 Zeichen) erreicht.
+            </div>
             <div class="mission-row">
               <input
                 id="missionEnterSection"
@@ -2670,6 +3063,7 @@
                 placeholder="Untereinsatzabschnittsleitung"
                 autocomplete="off"
                 aria-label="Untereinsatzabschnittsleitung"
+                maxlength="35"
               />
               <button
                 id="missionEnterSectionClear"
@@ -2680,6 +3074,39 @@
               >
                 &times;
               </button>
+            </div>
+            <div id="missionEnterSectionHint" class="mission-limit-hint" hidden>
+              Maximale Länge (35 Zeichen) erreicht.
+            </div>
+            <div class="mission-row mission-row-textarea">
+              <textarea
+                id="missionDescription"
+                placeholder="Einsatzbeschreibung"
+                autocomplete="off"
+                aria-label="Einsatzbeschreibung"
+                rows="5"
+                maxlength="600"
+              ></textarea>
+              <div class="mission-textarea-actions">
+                <button
+                  id="missionDescriptionClear"
+                  type="button"
+                  class="mission-clear"
+                  aria-label="Einsatzbeschreibung löschen"
+                  disabled
+                >
+                  &times;
+                </button>
+                <button
+                  id="missionDescriptionToggle"
+                  type="button"
+                  class="mission-clear mission-action-btn"
+                  aria-label="Einsatzbeschreibung ausblenden"
+                ></button>
+              </div>
+            </div>
+            <div id="missionDescriptionHint" class="mission-limit-hint" hidden>
+              Maximale Länge (600 Zeichen) erreicht.
             </div>
           </div>
         </div>
@@ -2845,11 +3272,57 @@
         aria-live="polite"
         hidden
       ></div>
+      <div
+        id="missionDescriptionOverlay"
+        class="mission-description-overlay"
+        role="status"
+        aria-live="polite"
+        hidden
+      ></div>
       <div id="coordHud" class="coord-hud">
         <div class="row"><b>Live-Koordinaten</b></div>
         <div class="row"><b>Lat/Lng:</b><span id="hudDD">—</span></div>
         <div class="row"><b>UTM:</b><span id="hudUTM">—</span></div>
         <div class="row"><b>MGRS:</b><span id="hudMGRS">—</span></div>
+      </div>
+    </div>
+
+    <div
+      id="customMarkerOverlay"
+      class="custom-marker-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="customMarkerOverlayTitle"
+      aria-describedby="customMarkerOverlayMission"
+      hidden
+    >
+      <div class="custom-marker-overlay-card" tabindex="-1">
+        <div class="custom-marker-overlay-header">
+          <h2 id="customMarkerOverlayTitle">Einsatzübersicht</h2>
+        </div>
+        <div
+          id="customMarkerOverlayBody"
+          class="custom-marker-overlay-body"
+          role="document"
+        >
+          <div
+            id="customMarkerOverlayMission"
+            class="custom-marker-overlay-mission"
+          ></div>
+          <div id="customMarkerOverlayTable"></div>
+        </div>
+        <div class="custom-marker-overlay-footer">
+          <div
+            id="customMarkerOverlayMeta"
+            class="custom-marker-overlay-meta"
+          ></div>
+          <div class="custom-marker-overlay-actions">
+            <button id="customMarkerOverlayPdf" type="button">PDF</button>
+            <button id="customMarkerOverlayClose" type="button">
+              Schließen
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2926,6 +3399,7 @@
       let gridLayer = null;
       let prevZoom = null;
       const CUSTOM_MARKER_STORAGE_KEY = "kwCustomMarkers";
+      const MISSION_STORAGE_KEY = "kwMissionData";
       const customMarkers = new Map(); // id -> { data, marker }
       const reverseGeocodeCache = new Map(); // key -> address string (may be empty)
       const reverseGeocodePending = new Map(); // key -> Promise<string>
@@ -2935,12 +3409,78 @@
       let customMarkerLayerVisible = true;
       let customMarkerMode = false;
       let storageAvailable = true;
+      let customMarkerOverlayOpen = false;
+      let customMarkerOverlayPreviousFocus = null;
+      let customMarkerOverlayKeyHandler = null;
+      const customMarkerOverlayMapState = {
+        scrollWheelZoom: null,
+        touchZoom: null,
+        doubleClickZoom: null,
+        boxZoom: null,
+        keyboard: null,
+        dragging: null,
+      };
+      const MISSION_FIELD_LIMITS = {
+        name: 80,
+        lead: 35,
+        section: 35,
+        enterSection: 35,
+        description: 600,
+      };
+      const MISSION_FIELD_DOM = {
+        name: {
+          input: "missionText",
+          clear: "missionClear",
+          hint: "missionTextHint",
+        },
+        lead: {
+          input: "missionLead",
+          clear: "missionLeadClear",
+          hint: "missionLeadHint",
+        },
+        section: {
+          input: "missionSection",
+          clear: "missionSectionClear",
+          hint: "missionSectionHint",
+        },
+        enterSection: {
+          input: "missionEnterSection",
+          clear: "missionEnterSectionClear",
+          hint: "missionEnterSectionHint",
+        },
+        description: {
+          input: "missionDescription",
+          clear: "missionDescriptionClear",
+          hint: "missionDescriptionHint",
+          toggle: "missionDescriptionToggle",
+        },
+      };
+      const TACTICAL_WEEK_CODES = ["SO", "MO", "DI", "MI", "DO", "FR", "SA"];
+      const TACTICAL_MONTH_CODES = [
+        "JAN",
+        "FEB",
+        "MAR",
+        "APR",
+        "MAY",
+        "JUN",
+        "JUL",
+        "AUG",
+        "SEP",
+        "OCT",
+        "NOV",
+        "DEC",
+      ];
       const missionData = {
         name: "",
         lead: "",
         section: "",
         enterSection: "",
+        description: "",
       };
+      let missionDescriptionVisible = true;
+      const KW_LOGO_DATA_URL =
+        "data:image/png;base64," +
+        "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABmJLR0QA/wD/AP+gvaeTAAAOOElEQVR4nO2ba5CU5ZXHf+ftbgZmgOGuXLQQ0FC7akABd7lYwVoVZroxxnV2s2GzqVoTVlZhpt14S22qd5Mtozj9DuAlRC2N0ZQ7cVeH7h5BLccIWguKeNtNgIhWlgFTIGZw7vP2+98PM6NNz9tzAZT9wP/TzHOeyznnfZ7znOec03AGZ3AGZ3Ca4D6n6e5zmn46eQifzsUty109f37zdPFwWhUgCJ3O9QHsy1ro7jqNihiXOMYFwAwZ44BlPeQtJo4C+3HY0+Gx+7Zr7NMvg68vVAHJOs0yh5UGV8uYR/eOOwbsB44ILjRhGO8CE4CZwCjAA17H2BoynlhTZu9/UTyecgVIMjdN1IzvA4uBQ2Zs9qEBn1fjMWvs7bs+pYcA1sbsu71tG+o1zRMLTVwBrADOBraZsW5tGRkz06nk95QqwE3paxg1wMVASsaD01p4oaLCskH916d0LsDamP0+iF5bq9CBEq40WI2IAm/LpzK+wn59qng+JQpwn9EYwmzAWCmRweHOeLm9O9C4gRSQi5o6XeyHuMtgOfB4RxFrb7/Smk6W9yEroCat62WUVpXbwwDJlBZgPGVQJGN1vNzqcvsnU1rghGmqXG578ucaigJ64ab0dYz7gXYZfxUvtzeGKkMunKEOkFGK+JmbUjyZ0TVmvAzs7zIuzRcewPFpV5YnE7UadjKM9qIqZs+GHOYg9pjY7qb0lycz3wkdATetSsAFfMSDTbtYk0iYH9R3Y52meCEaMe4KGf/SBhNHwGjfo0RhpgKYR6MTpsXL0hQOcWRNmXUMxENtrUKNxWwEvodxQ1W5PXYisgx5B/Tg9whfwjFjdyHhAZwOjgEgbsuKG4o9Ip7DR06Yd+jgLTp4ywnzjufwkRlFvpizIa0l61M6f9MmRQrN22NY9xocQzzspvT1ExFkyDsgmdICx/i1xCNm7AaOVUbtV/n9amsVOjCa2XiMc6BeMBJojHTy1Zu+YR9DYRvQc5VOCRszPJ+jx2L8JmHHK9lNKY5xLxA34yuI7/jGkqHahCHtAPcZjcF4Cni5aRdrKqP2SJDw972o8Y0jWGJwNB61bYIjPaSp3jAeGmgdM1M8Zo1rorYtMpxPStNcntyicb30ZEZVGNUy7qyKWs2UFm4SbDPx1E9eUOlQZBraEQizwaCoK8LfFdr2yTrN8jqY1TSS7VXL7FBPc68CEFxbk9J3g8YG4ear7GDxQV51spy/oV4z3XotMlGNuCVebj+B7uPgRVgJFBd1UDMUkQZ9BGoyulziZRnXBll7gHuf1Z9Ewjhro/Zebrub1hbg6pym1qy4NAKtMPhrMJnRRR6EIkZJVZm9mk930/oG8DTiiqqYvTyYOQe1AySZYKNEppDwyTrNChK+B0fy/i8Owy8tREEjF4R4ub0bhmxXBx8F0aui9p8GWzGqJQ3q4w5KAeszxBAX4XBnEP2+FzXeCTO+gPBIfNynzZib9an2jXluvRatT2uhm9aMgfyFeLm9GypiYq5NyEVW3A7MTaZZPgjRBrkD4J+AVJB7W1urUFcbF/2xmF2Fxht8UoC0QjCqqsxendzKjpBD59hRLEhu1p/W1qpgrGDk/7LLurg4IfXh/5aYvS2RcRxuHYxsAyogWadZwGKDB4LoB0Yzmwh7EkvNC6JvSqnYNwpZZjO4t6ZOZ1VUWHZNmR1Yu9y22zCOHhjO4uRrGhE0aNUq6xLsG/ccswMnDfEA4vIN9Zo5kHwDKsAcVgKHprTyYj4t0aBwSIzNsfbHYVNKxa2wICR297PEBDk8mntmq5bZoRLjdfuYywopIR6zRnzGBzlLTSN4weAPWZ+/GUi+gRUAV5uxOehJO7aZ87IeHwSNq61VqCXE/GLYadAY1CdnkeVuhhtzm1bFrLUYdnKEBYWOQ5vDB+1TmJ7fnlhqng8pfR5xKoh+FXB3nUbJuBTxUiDfxtlVUQ4G0Q6MZrY57F0Vs1bf6WsE+8wFxfltq2LWGhH7PhrJV4LGtO3koBlnF+CtwWDB3XUa1d+6/SqgKMxcIOKL1/JpG+pV5ImOoAhNba2Ghbo+Pxoh63MNHg/x5tRW3CDSzdfYQc9nfNDtkEiY7xudtQE0v4vtQHi4w1f7W7pfBUjMBj4N+sptMDEiDgeN+zDCOe0hPuz9/+iIfhXgY1zSWMxeN60HqlPqw7A8PiwtZloBHg8fGMHE/Pb4NRwAmmXBu6cX/dsAYyawL+grj4DRXcMIjMgURTjrvGY+M4yJpdZu4q+Bx8y6vb/PBDB+EM4yFeNHGItCxvfy5/u0lEM+wVs90kmTGaP7sN7N8+8Qs/oTsX8FiFIVuMN9j5KwT0uBcU6+0ayM2b8bPCMRwuN6M25FvOT4NN+0gkNV5fYYolZwfv50iaXmhRXM65EmWmSUBNEMPlHhK7i3z/Fwn9N0y3JXT9LiMkSRAyngR7n9fLgEj7ecMH0eRb4xzxHHPUt9j3EW4XmJhx34adaIGtzfQ17tiIxvlAM/cMTC/Dkl5pvxep+1wjh4zHHgzTzSP/tGTNBu3TdRViHuqFpuH+Z2OtGAyNAR4i8EYyzMUwAGnx0rqftv684XTPa6GJ4/XA6nNBw+KLhp/TSZVh8HCCCZ0bwN9SoKHFevRfltiQaF3bR2J9PaCN0PrGRaq920bux1gtZtVYmblr8+rQvzx69PaXHQWolHNTyZ0bwC/De4aQV6sL0YaAf80RGBj46w0eo5wWfP8VGiQcflHRNLzZNYZfAPNRldZmYKibSjz5Md37/aWoCDPlxw3NgGhT3re9QAJpxDiamALYKxpmBD/Rmv/RFNvC9jVtDT0svSZB5jgsb58NG4tr5WOx6znYJHJe4v5N1Zd5zvOEM4qpPJvk+gu93VTqnUE3fMQQ/PMzF+V0A8YKAd4LAHGOWmmZJPmtbG4VCYCUHDprZyQNbXRQUgzO2IcxqLWR1EFuz18xRgXUxvaQ92p32HScfa+vojyTqmASNN9MlH5KJfBXR47Aa6cOhzpisqrNPPMjxod1RUWGe2i0/cLZqcT4svs6M43Ab8OBtwtwv2Wc4RSKY01ff4OFFhnfl9Ewk55hMJojkRFgNeu8/b/cnYrwJuu8Y+NbGrJ1HZB+ZzKGh3AExr57fyuWBTSn18/Moyfo54wzF+EMDQPnoUsG6rShCzzu0M/orjFjCFcPDRwOcKYMdAafYBr0E5bAFWBJ3ZT0bygeMQ+OauqLAsY9jZCgvylWBm8h1u9GFZ1liaS/PEXuAs9xVNDncyn3Z2Fkqu+mLGsaLPXe5eJBoUxoiZsWUg+QZUQMh4Ajj7QAlX9lloqXmOcWTj8wrcBfGF1qbx7GgR8zfWHd/nlnLba8ZDZiQSDfrs3m9uYz/gcYyY2tgRr7C2oLnvrtc0icNBgZhRzVwFTJL45UDyDaiAnuKE7Uaw0Tq6nN96HVxQKIsTX2ht09rZrghjkmktqX5W5/RekX4HGxBOaTO3JxoUrt6qc0YXc5nEIURLIeE3bVJkWJZZTW8EHw3HWI3xSlXU9g8k3yCjwqxDRKvrNTefljDzFeGdtmlcUmh8T7jrf461ssMJExnbwgK3XoucYVwo43GMO0tbuX5YB+FjrewweA+n8COmdQrzioy3g3ITbkZzgDLf557ByDao0LEkq8nwJtBYFbVoUJ8N9ZrpieLB1AX0ojc15hsuxvjKMpaamZIprTdjfFXUVuaPqanTxQrRXOjr9uQgJlSWM38w1SSD2gFmJsEaoCw3Cblxs87rrfNbU2bvm/CSGV00mDmPQ5ibEHPc+u5yOQf2Ycd7g9AtfGcYB4c+1ytATUbXAVfJ55bBltIM+jEUj9o2jF9gPLBuqya5Gc3xHF63LGt6+1RF7TdeJ63V9fqz/jK7+ahaZocQ/2oi+UBaY33Yiz5XwKZNirgp/blCNEeMEny2uSnFc+eoqdNZiPvMeGwoJTRDeg12DGMN0Bbu4lnEC8B/R1r5YW6fW6+1981hb+sUFiVTmjrYuae2sd7EwU74sYXZC5Su26pJd9drWusUFinCnqqo7e9JicUxqt2U7oDuAKwf4klBs2NUDkWmIafH3Yy+CTyJz8FiuGBVzFqD+iUScsYtYLYvJnQY+9t2cjDfaOWnx2s2a74cXnPEUt94EeMWxEtNb7Anf2xuehyYDXwbsbgqZvlxgX5xIvUB95hxJXARxj1V5RaYLutFokHhsc2cZ8bZvtEpcTjSSZM/nOZsB5MZDiFxyGlnZNcwSg3ulXGxfByMf4tH7ZFCc7tpVRr8UDDK4LrKqG0eqjwnXCXmZvQdxMPAz6a2cnMhby0XiVoNGz2CiX6WUidCsfndgU45HDDRInHM8fHk8A7GOBP3VsbsjqC5ekpk7gf+XnBDPGo/PxE5TqpMriatFYKnDP5LYb5VKENUCIUqRNyM/hbxuMR/xGPWpwhqQ70mZn1+AXwNsbIqZk+fqAwnFRKrjNpmGZcLzsVjV09+/qRRWcYTBg0WdBVmdJ3v8w4wE7HwZISHUxATjJfbGx1FXAo8DzztplTf442dMMxMjsO3Qw5lvW3V9ZrrZrRV4leCLSGHS4dq8ALXOtkJcpFMa4lBDTBXIiN48NORPF8oczxQoWSiQeFRzVxlcKN1R4zfdETl2phtP1U8fyHF0jUZyoBbgSUGf/C7w+ovhcRrucIGFUuvT+lc32ERPldgxIBJGK/4PvfEozz3/7pYOh9uWjOAb9FdH3QZ3eXyzRj7JQ6buBBAxnsGk4AZQAnQBew0Y0soy5M3r7DADPSpwJf2g4n7azWyo5i5PTV904GJ5PxgAjhs8IGJPeE23vrHCmv+sng7bXDTqnXTqj2dPJzeH03BgM7TF43T+6OpEIFe3hmcwRmcwZeF/wPYkBfKr5eHVAAAAABJRU5ErkJggg==";
 
       /* Overlays */
       let thwLayer, fwLayer, hosLayer, polLayer, spLayer;
@@ -3111,6 +3651,31 @@
         if (!raw) return "";
         const match = raw.match(/^#?([0-9a-fA-F]{6})$/);
         return match ? "#" + match[1].toUpperCase() : "";
+      }
+
+      function hexToRgb(hex) {
+        const match = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+        if (!match) return null;
+        const value = parseInt(match[1], 16);
+        return {
+          r: (value >> 16) & 255,
+          g: (value >> 8) & 255,
+          b: value & 255,
+        };
+      }
+
+      function formatTacticalTime(dateInput) {
+        const d =
+          dateInput instanceof Date
+            ? new Date(dateInput.getTime())
+            : new Date(dateInput);
+        if (!Number.isFinite(d.getTime())) return "";
+        const tt = TACTICAL_WEEK_CODES[d.getDay()] || "";
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        const mmm = TACTICAL_MONTH_CODES[d.getMonth()] || "";
+        const jj = String(d.getFullYear()).slice(-2);
+        return `${tt} ${hh}${mm} ${mmm} ${jj}`.trim();
       }
 
       function showKwConfirm(opts = {}) {
@@ -3543,6 +4108,7 @@
               '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap-Mitwirkende</a>',
             minZoom: MIN_Z,
             maxZoom: MAX_Z,
+            crossOrigin: "anonymous",
           }
         );
         baseSat = L.tileLayer(
@@ -3552,6 +4118,7 @@
               'Imagery &copy; <a href="https://www.esri.com/" target="_blank">Esri</a>, <a href="https://www.maxar.com/" target="_blank">Maxar</a>, Earthstar Geographics, and the GIS User Community',
             minZoom: MIN_Z,
             maxZoom: MAX_Z,
+            crossOrigin: "anonymous",
           }
         );
 
@@ -6385,6 +6952,69 @@
         }
       }
 
+      function readStoredMissionData() {
+        if (!storageAvailable) return null;
+        try {
+          const raw = window.localStorage.getItem(MISSION_STORAGE_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== "object") return null;
+          const result = {};
+          Object.keys(MISSION_FIELD_DOM).forEach((key) => {
+            if (typeof parsed[key] === "string") {
+              result[key] = normalizeMissionValue(key, parsed[key]);
+            }
+          });
+          if (typeof parsed.descriptionVisible === "boolean") {
+            result.descriptionVisible = parsed.descriptionVisible;
+          }
+          return result;
+        } catch (err) {
+          console.warn("Mission storage read failed:", err);
+          return null;
+        }
+      }
+
+      function writeStoredMissionData() {
+        if (!storageAvailable) return;
+        try {
+          const payload = {};
+          Object.keys(MISSION_FIELD_DOM).forEach((key) => {
+            payload[key] = missionData[key] || "";
+          });
+          payload.descriptionVisible = !!missionDescriptionVisible;
+          window.localStorage.setItem(
+            MISSION_STORAGE_KEY,
+            JSON.stringify(payload)
+          );
+        } catch (err) {
+          console.warn("Mission storage write failed:", err);
+          storageAvailable = false;
+          Object.keys(MISSION_FIELD_DOM).forEach((key) =>
+            updateMissionFieldUI(key)
+          );
+        }
+      }
+
+      function restoreMissionData() {
+        const stored = readStoredMissionData();
+        if (!stored) return;
+        Object.entries(stored).forEach(([key, value]) => {
+          const cfg = MISSION_FIELD_DOM[key];
+          if (!cfg) return;
+          const inputEl = cfg.input ? $(cfg.input) : null;
+          if (inputEl) inputEl.value = value;
+          missionData[key] = value;
+        });
+        if (typeof stored.descriptionVisible === "boolean") {
+          missionDescriptionVisible = stored.descriptionVisible;
+        }
+        updateMissionDisplay();
+        Object.keys(MISSION_FIELD_DOM).forEach((key) =>
+          updateMissionFieldUI(key)
+        );
+      }
+
       function ensureCustomMarkerLayer() {
         if (!customMarkerLayer) {
           customMarkerLayer = L.layerGroup();
@@ -7037,6 +7667,22 @@
             ? "Eigene Marker als JSON exportieren"
             : "Keine Marker vorhanden";
         }
+        const centerBtn = $("customMarkerCenter");
+        if (centerBtn) {
+          const hasMarkers = count > 0;
+          centerBtn.disabled = !hasMarkers;
+          centerBtn.title = hasMarkers
+            ? "Karte auf alle eigenen Marker zentrieren"
+            : "Keine Marker vorhanden";
+        }
+        const listBtn = $("customMarkerList");
+        if (listBtn) {
+          listBtn.disabled = false;
+          listBtn.title = count
+            ? "Einsatzübersicht anzeigen"
+            : "Keine Marker vorhanden – Liste zeigt einen Hinweis.";
+        }
+        refreshCustomMarkerOverlayContent();
       }
 
       function collectCustomMarkerPayload() {
@@ -7064,6 +7710,1035 @@
         }));
       }
 
+      function collectCustomMarkerLatLngs() {
+        return Array.from(customMarkers.values())
+          .map((entry) => {
+            try {
+              if (
+                !entry ||
+                !entry.marker ||
+                typeof entry.marker.getLatLng !== "function"
+              )
+                return null;
+              const latLng = entry.marker.getLatLng();
+              if (
+                latLng &&
+                Number.isFinite(latLng.lat) &&
+                Number.isFinite(latLng.lng)
+              ) {
+                return latLng;
+              }
+            } catch {}
+            return null;
+          })
+          .filter(Boolean);
+      }
+
+      function formatDateTimeForOverlay(date) {
+        if (!(date instanceof Date)) return "";
+        const timestamp = date.getTime();
+        if (!Number.isFinite(timestamp)) return "";
+        try {
+          return date.toLocaleString("de-DE", {
+            dateStyle: "short",
+            timeStyle: "short",
+          });
+        } catch (err) {
+          try {
+            return date.toISOString();
+          } catch {
+            return "";
+          }
+        }
+      }
+
+      function getMissionInfoRecords() {
+        const records = [];
+        if (missionData.name)
+          records.push({ label: "Einsatz", value: missionData.name });
+        if (missionData.lead)
+          records.push({ label: "Einsatzleitung", value: missionData.lead });
+        if (missionData.section)
+          records.push({ label: "Abschnitt", value: missionData.section });
+        if (missionData.enterSection)
+          records.push({
+            label: "Unterabschnitt",
+            value: missionData.enterSection,
+          });
+        if (missionData.description)
+          records.push({
+            label: "Beschreibung",
+            value: missionData.description,
+          });
+        return records;
+      }
+
+      function buildMissionOverlayHtml() {
+        const records = getMissionInfoRecords();
+        if (!records.length) return "";
+        return records
+          .map((rec) => {
+            const label = escapeHtml(rec.label);
+            const valueRaw = rec.value ? String(rec.value) : "";
+            const value = valueRaw
+              ? escapeHtml(valueRaw).replace(/\r?\n/g, "<br>")
+              : "—";
+            if (rec.label === "Beschreibung") {
+              return `<div class="mission-overlay-description"><strong>${label}</strong><div class="mission-overlay-description-text">${value}</div></div>`;
+            }
+            return `<div><strong>${label}:</strong> ${value}</div>`;
+          })
+          .join("");
+      }
+
+      function buildMarkerDetailsHtml(marker, typeInfo) {
+        const blocks = [];
+        const typeLabel = escapeHtml(typeInfo?.label || "Unbekannter Typ");
+        blocks.push(`<div><strong>Typ:</strong> ${typeLabel}</div>`);
+
+        if (marker.label) {
+          blocks.push(
+            `<div><strong>Bezeichnung:</strong> ${escapeHtml(
+              marker.label
+            )}</div>`
+          );
+        }
+
+        if (marker.text) {
+          const textHtml = escapeHtml(marker.text).replace(/\r?\n/g, "<br>");
+          blocks.push(`<div><strong>Notiz:</strong> ${textHtml}</div>`);
+        }
+
+        if (marker.type === "gefahr" && marker.hazardCategory) {
+          blocks.push(
+            `<div><strong>Gefahrenlage:</strong> ${escapeHtml(
+              marker.hazardCategory
+            )}</div>`
+          );
+        }
+
+        if (marker.type === "schaden" && marker.damageCategory) {
+          blocks.push(
+            `<div><strong>Schadensbild:</strong> ${escapeHtml(
+              marker.damageCategory
+            )}</div>`
+          );
+        }
+
+        return blocks.join("");
+      }
+
+      function renderCustomMarkerOverlayContent() {
+        const tableEl = $("customMarkerOverlayTable");
+        const missionEl = $("customMarkerOverlayMission");
+        const metaEl = $("customMarkerOverlayMeta");
+        if (!missionEl || !metaEl || !tableEl) return;
+
+        const markers = collectCustomMarkerPayload();
+        const count = markers.length;
+        const now = new Date();
+        const dateStr = now.toLocaleDateString("de-DE", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+        const timeStr = now.toLocaleTimeString("de-DE", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        metaEl.textContent = `Stand: ${dateStr} · Uhrzeit: ${timeStr} · Marker: ${count}`;
+        metaEl.hidden = false;
+
+        const missionHtml = buildMissionOverlayHtml();
+        if (missionHtml) {
+          missionEl.innerHTML = missionHtml.trim();
+          missionEl.hidden = false;
+        } else {
+          missionEl.innerHTML = "";
+          missionEl.hidden = true;
+        }
+
+        if (!count) {
+          tableEl.innerHTML =
+            '<div class="custom-marker-overlay-empty">Aktuell sind keine eigenen Marker gespeichert.</div>';
+          return;
+        }
+
+        const rows = markers
+          .map((marker, index) => {
+            const typeInfo = getMarkerTypeInfo(marker.type);
+            const nameText = marker.label
+              ? escapeHtml(marker.label)
+              : escapeHtml(typeInfo.label || `Marker ${index + 1}`);
+            const colorValue = marker.color || typeInfo?.color || "#8fb4ff";
+            const colorDot = `<span class="color-dot" style="background:${escapeHtml(
+              colorValue
+            )}"></span>`;
+            const typeLabel = escapeHtml(typeInfo.label || "Typ unbekannt");
+            const latOk = Number.isFinite(marker.lat);
+            const lngOk = Number.isFinite(marker.lng);
+            const utm =
+              latOk && lngOk ? getUTMString(marker.lat, marker.lng) : "";
+            const mgrs =
+              latOk && lngOk ? getMGRSString(marker.lat, marker.lng) : "";
+            const coordParts = [];
+            if (utm) coordParts.push(`<span>UTM: ${escapeHtml(utm)}</span>`);
+            if (mgrs) coordParts.push(`<span>MGRS: ${escapeHtml(mgrs)}</span>`);
+            if (marker.address) {
+              coordParts.push(
+                `<span>Adresse: ${escapeHtml(marker.address).replace(
+                  /\r?\n/g,
+                  "<br>"
+                )}</span>`
+              );
+            }
+            const coordsHtml = coordParts.length
+              ? `<div class="custom-marker-overlay-coords">${coordParts.join(
+                  ""
+                )}</div>`
+              : "—";
+
+            const detailHtml = buildMarkerDetailsHtml(marker, typeInfo);
+            const detailsCell = detailHtml
+              ? `<div class="custom-marker-overlay-details">${detailHtml}</div>`
+              : "—";
+
+            return `
+            <tr>
+              <td>${index + 1}</td>
+              <td>
+                <div class="custom-marker-overlay-marker">
+                  <span class="name">${nameText}</span>
+                  <span class="type">${colorDot}${typeLabel}</span>
+                </div>
+              </td>
+              <td>${coordsHtml}</td>
+              <td>${detailsCell}</td>
+            </tr>`;
+          })
+          .join("");
+
+        tableEl.innerHTML = `<table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Marker</th>
+              <th>Koordinaten</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>${rows}
+          </tbody>
+        </table>`;
+      }
+
+      function refreshCustomMarkerOverlayContent() {
+        if (!customMarkerOverlayOpen) return;
+        renderCustomMarkerOverlayContent();
+      }
+
+      function showCustomMarkerOverlay() {
+        const overlay = $("customMarkerOverlay");
+        if (!overlay) return;
+        customMarkerOverlayPreviousFocus =
+          document.activeElement &&
+          typeof document.activeElement.focus === "function"
+            ? document.activeElement
+            : null;
+        customMarkerOverlayOpen = true;
+        document.body.classList.add("custom-marker-overlay-open");
+
+        if (map) {
+          try {
+            const zoomCtl = map.scrollWheelZoom;
+            customMarkerOverlayMapState.scrollWheelZoom =
+              zoomCtl && typeof zoomCtl.enabled === "function"
+                ? zoomCtl.enabled()
+                : null;
+            if (customMarkerOverlayMapState.scrollWheelZoom && zoomCtl)
+              zoomCtl.disable();
+
+            const touchCtl = map.touchZoom;
+            customMarkerOverlayMapState.touchZoom =
+              touchCtl && typeof touchCtl.enabled === "function"
+                ? touchCtl.enabled()
+                : null;
+            if (customMarkerOverlayMapState.touchZoom && touchCtl)
+              touchCtl.disable();
+
+            const dblCtl = map.doubleClickZoom;
+            customMarkerOverlayMapState.doubleClickZoom =
+              dblCtl && typeof dblCtl.enabled === "function"
+                ? dblCtl.enabled()
+                : null;
+            if (customMarkerOverlayMapState.doubleClickZoom && dblCtl)
+              dblCtl.disable();
+
+            const boxCtl = map.boxZoom;
+            customMarkerOverlayMapState.boxZoom =
+              boxCtl && typeof boxCtl.enabled === "function"
+                ? boxCtl.enabled()
+                : null;
+            if (customMarkerOverlayMapState.boxZoom && boxCtl) boxCtl.disable();
+
+            const keyCtl = map.keyboard;
+            customMarkerOverlayMapState.keyboard =
+              keyCtl && typeof keyCtl.enabled === "function"
+                ? keyCtl.enabled()
+                : null;
+            if (customMarkerOverlayMapState.keyboard && keyCtl)
+              keyCtl.disable();
+
+            const dragCtl = map.dragging;
+            customMarkerOverlayMapState.dragging =
+              dragCtl && typeof dragCtl.enabled === "function"
+                ? dragCtl.enabled()
+                : null;
+            if (customMarkerOverlayMapState.dragging && dragCtl)
+              dragCtl.disable();
+          } catch (err) {
+            console.warn("Map controls konnten nicht deaktiviert werden", err);
+          }
+        }
+
+        overlay.removeAttribute("hidden");
+        renderCustomMarkerOverlayContent();
+        const card = overlay.querySelector(".custom-marker-overlay-card");
+        if (card && typeof card.focus === "function") {
+          setTimeout(() => {
+            try {
+              card.focus();
+            } catch {}
+          }, 0);
+        }
+
+        customMarkerOverlayKeyHandler = (ev) => {
+          if (!customMarkerOverlayOpen) return;
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            hideCustomMarkerOverlay();
+          }
+        };
+        document.addEventListener(
+          "keydown",
+          customMarkerOverlayKeyHandler,
+          true
+        );
+      }
+
+      function hideCustomMarkerOverlay() {
+        const overlay = $("customMarkerOverlay");
+        if (!overlay) return;
+        overlay.setAttribute("hidden", "");
+        document.body.classList.remove("custom-marker-overlay-open");
+        customMarkerOverlayOpen = false;
+
+        if (customMarkerOverlayKeyHandler) {
+          document.removeEventListener(
+            "keydown",
+            customMarkerOverlayKeyHandler,
+            true
+          );
+          customMarkerOverlayKeyHandler = null;
+        }
+
+        if (map) {
+          try {
+            const zoomCtl = map.scrollWheelZoom;
+            if (customMarkerOverlayMapState.scrollWheelZoom && zoomCtl)
+              zoomCtl.enable();
+            customMarkerOverlayMapState.scrollWheelZoom = null;
+
+            const touchCtl = map.touchZoom;
+            if (customMarkerOverlayMapState.touchZoom && touchCtl)
+              touchCtl.enable();
+            customMarkerOverlayMapState.touchZoom = null;
+
+            const dblCtl = map.doubleClickZoom;
+            if (customMarkerOverlayMapState.doubleClickZoom && dblCtl)
+              dblCtl.enable();
+            customMarkerOverlayMapState.doubleClickZoom = null;
+
+            const boxCtl = map.boxZoom;
+            if (customMarkerOverlayMapState.boxZoom && boxCtl) boxCtl.enable();
+            customMarkerOverlayMapState.boxZoom = null;
+
+            const keyCtl = map.keyboard;
+            if (customMarkerOverlayMapState.keyboard && keyCtl) keyCtl.enable();
+            customMarkerOverlayMapState.keyboard = null;
+
+            const dragCtl = map.dragging;
+            if (customMarkerOverlayMapState.dragging && dragCtl)
+              dragCtl.enable();
+            customMarkerOverlayMapState.dragging = null;
+          } catch (err) {
+            console.warn(
+              "Map controls konnten nicht wiederhergestellt werden",
+              err
+            );
+          }
+        }
+
+        const toRestore = customMarkerOverlayPreviousFocus;
+        customMarkerOverlayPreviousFocus = null;
+        if (toRestore && typeof toRestore.focus === "function") {
+          setTimeout(() => {
+            try {
+              toRestore.focus();
+            } catch {}
+          }, 0);
+        }
+      }
+
+      async function downloadCustomMarkerListPdf() {
+        const payload = collectCustomMarkerPayload();
+        const jspdf = window.jspdf || {};
+        const { jsPDF } = jspdf;
+        if (typeof jsPDF !== "function") {
+          console.warn("jsPDF nicht verfügbar für PDF-Export.");
+          updateCustomMarkerHint(
+            "PDF-Export nicht möglich – Bibliothek jsPDF steht nicht zur Verfügung."
+          );
+          return;
+        }
+
+        const doc = new jsPDF({
+          orientation: "portrait",
+          unit: "pt",
+          format: "a4",
+        });
+        const now = new Date();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const marginX = 56;
+        const marginTop = 60;
+        const contentWidth = pageWidth - marginX * 2;
+        let cursorY = marginTop;
+        let missionNameForHeader = "";
+
+        const brandColor = { r: 143, g: 180, b: 255 };
+        const headerBg = { r: 248, g: 250, b: 255 };
+        const textColor = { r: 28, g: 34, b: 46 };
+        const subtleText = { r: 96, g: 110, b: 134 };
+        const borderColor = { r: 215, g: 223, b: 238 };
+        const panelFill = { r: 248, g: 250, b: 255 };
+
+        const stamp = formatDateTimeForOverlay(now) || "-";
+        const tacticalTime = formatTacticalTime(now) || "";
+        const totalMarkers = payload.length;
+
+        updateCustomMarkerHint("PDF-Export wird vorbereitet …");
+
+        const drawContinuationHeader = () => {
+          const headerLabel = missionNameForHeader
+            ? `Einsatzübersicht – ${missionNameForHeader}`
+            : "Einsatzübersicht";
+          const headerBaseline = marginTop - 16;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+          const headerLines = doc.splitTextToSize(headerLabel, contentWidth);
+          doc.text(headerLines, marginX, headerBaseline);
+          const lineY = headerBaseline + (headerLines.length - 1) * 12 + 10;
+          doc.setDrawColor(brandColor.r, brandColor.g, brandColor.b);
+          doc.setLineWidth(1.2);
+          doc.line(marginX, lineY, marginX + contentWidth, lineY);
+          doc.setLineWidth(0.6);
+          cursorY = marginTop + 14;
+        };
+
+        const ensureSpace = (height) => {
+          if (cursorY + height > pageHeight - marginTop) {
+            doc.addPage();
+            cursorY = marginTop;
+            drawContinuationHeader();
+          }
+        };
+
+        ensureSpace(70);
+        doc.setFillColor(headerBg.r, headerBg.g, headerBg.b);
+        doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+        doc.roundedRect(
+          marginX - 16,
+          cursorY - 48,
+          contentWidth + 32,
+          90,
+          14,
+          14,
+          "FD"
+        );
+        if (KW_LOGO_DATA_URL) {
+          try {
+            doc.addImage(
+              KW_LOGO_DATA_URL,
+              "PNG",
+              marginX - 8,
+              cursorY - 40,
+              60,
+              60
+            );
+          } catch (err) {
+            console.warn("Logo konnte nicht zum PDF hinzugefügt werden", err);
+          }
+        }
+        doc.setTextColor(textColor.r, textColor.g, textColor.b);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.text("KoordinatenWerk", marginX + 60, cursorY - 6);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(13);
+        doc.text("Einsatzübersicht", marginX + 60, cursorY + 16);
+        if (tacticalTime) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+          doc.text(tacticalTime, marginX + contentWidth, cursorY + 6, {
+            align: "right",
+          });
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+        }
+        doc.setDrawColor(brandColor.r, brandColor.g, brandColor.b);
+        doc.setLineWidth(2);
+        doc.line(marginX + 60, cursorY + 22, marginX + 210, cursorY + 22);
+        doc.setLineWidth(0.6);
+        cursorY += 50;
+
+        const missionSnapshot = {
+          name: normalizeMissionValue(
+            "name",
+            typeof document !== "undefined" &&
+              document.getElementById("missionText")
+              ? document.getElementById("missionText").value
+              : missionData.name
+          ),
+          lead: normalizeMissionValue(
+            "lead",
+            typeof document !== "undefined" &&
+              document.getElementById("missionLead")
+              ? document.getElementById("missionLead").value
+              : missionData.lead
+          ),
+          section: normalizeMissionValue(
+            "section",
+            typeof document !== "undefined" &&
+              document.getElementById("missionSection")
+              ? document.getElementById("missionSection").value
+              : missionData.section
+          ),
+          enterSection: normalizeMissionValue(
+            "enterSection",
+            typeof document !== "undefined" &&
+              document.getElementById("missionEnterSection")
+              ? document.getElementById("missionEnterSection").value
+              : missionData.enterSection
+          ),
+          description: normalizeMissionValue(
+            "description",
+            typeof document !== "undefined" &&
+              document.getElementById("missionDescription")
+              ? document.getElementById("missionDescription").value
+              : missionData.description
+          ),
+        };
+
+        missionNameForHeader =
+          missionSnapshot.name || missionData.name || "";
+
+        const missionPdfRecords = [
+          {
+            label: "Bezeichnung des Einsatzes",
+            value: missionSnapshot.name || missionData.name || "",
+          },
+          {
+            label: "Einsatzleitung",
+            value: missionSnapshot.lead || missionData.lead || "",
+          },
+          {
+            label: "Einsatzabschnittsleitung",
+            value: missionSnapshot.section || missionData.section || "",
+          },
+          {
+            label: "Untereinsatzabschnittsleitung",
+            value:
+              missionSnapshot.enterSection || missionData.enterSection || "",
+          },
+          {
+            label: "Einsatzbeschreibung",
+            value: missionSnapshot.description || missionData.description || "",
+          },
+        ];
+
+        const missionWrapped = missionPdfRecords.flatMap((rec) =>
+          doc.splitTextToSize(
+            `${rec.label}: ${rec.value ? rec.value : "—"}`
+              .replace(/\s+/g, " ")
+              .trim(),
+            contentWidth - 32
+          )
+        );
+
+        const missionBoxHeight = 42 + missionWrapped.length * 16;
+        ensureSpace(missionBoxHeight + 10);
+        doc.setFillColor(panelFill.r, panelFill.g, panelFill.b);
+        doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+        doc.roundedRect(
+          marginX,
+          cursorY,
+          contentWidth,
+          missionBoxHeight,
+          12,
+          12,
+          "FD"
+        );
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(textColor.r, textColor.g, textColor.b);
+        doc.text("Einsatzinformationen", marginX + 18, cursorY + 24);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
+        let missionY = cursorY + 44;
+        missionPdfRecords.forEach((rec) => {
+          const value = rec.value ? rec.value : "—";
+          const lines = doc.splitTextToSize(
+            `${rec.label}: ${value}`.replace(/\s+/g, " ").trim(),
+            contentWidth - 32
+          );
+          lines.forEach((line) => {
+            doc.text(line, marginX + 18, missionY);
+            missionY += 16;
+          });
+        });
+        cursorY += missionBoxHeight + 24;
+
+        if (!payload.length) {
+          const message = "Keine eigenen Marker vorhanden.";
+          const wrapped = doc.splitTextToSize(message, contentWidth - 32);
+          const boxHeight = 50 + wrapped.length * 16;
+          ensureSpace(boxHeight + 10);
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+          doc.roundedRect(
+            marginX,
+            cursorY,
+            contentWidth,
+            boxHeight,
+            12,
+            12,
+            "FD"
+          );
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+          doc.text("Hinweis", marginX + 18, cursorY + 24);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
+          let infoY = cursorY + 44;
+          wrapped.forEach((line) => {
+            doc.text(line, marginX + 18, infoY);
+            infoY += 16;
+          });
+          updateCustomMarkerHint("");
+          const fileStampEmpty = new Date()
+            .toISOString()
+            .replace(/[:.]/g, "-")
+            .replace(/Z$/, "Z");
+          doc.save(`kw-marker-liste-${fileStampEmpty}.pdf`);
+          return;
+        }
+
+        payload.forEach((marker, idx) => {
+          const typeInfo = getMarkerTypeInfo(marker.type);
+          const title = marker.label
+            ? marker.label
+            : typeInfo.label || `Marker ${idx + 1}`;
+          const detailLines = [];
+          detailLines.push(`Typ: ${typeInfo.label || "Unbekannt"}`);
+          if (marker.label) detailLines.push(`Bezeichnung: ${marker.label}`);
+          if (marker.text)
+            detailLines.push(
+              `Notiz: ${String(marker.text).replace(/\r?\n/g, " / ")}`
+            );
+          if (marker.type === "gefahr" && marker.hazardCategory)
+            detailLines.push(`Gefahrenlage: ${marker.hazardCategory}`);
+          if (marker.type === "schaden" && marker.damageCategory)
+            detailLines.push(`Schadensbild: ${marker.damageCategory}`);
+
+          const positionLines = [];
+          const utm =
+            Number.isFinite(marker.lat) && Number.isFinite(marker.lng)
+              ? getUTMString(marker.lat, marker.lng)
+              : "";
+          const mgrs =
+            Number.isFinite(marker.lat) && Number.isFinite(marker.lng)
+              ? getMGRSString(marker.lat, marker.lng)
+              : "";
+          if (utm) positionLines.push(`UTM: ${utm}`);
+          if (mgrs) positionLines.push(`MGRS: ${mgrs}`);
+          if (marker.address)
+            positionLines.push(
+              `Adresse: ${marker.address.replace(/\r?\n/g, " / ")}`
+            );
+
+          const availableWidth = contentWidth - 36;
+          const wrappedDetails = detailLines.flatMap((line) =>
+            doc.splitTextToSize(
+              line.replace(/\s+/g, " ").trim(),
+              availableWidth
+            )
+          );
+          const wrappedPositions = positionLines.length
+            ? positionLines.flatMap((line) =>
+                doc.splitTextToSize(
+                  line.replace(/\s+/g, " ").trim(),
+                  availableWidth
+                )
+              )
+            : doc.splitTextToSize("Position nicht verfügbar.", availableWidth);
+
+          const detailHeight = Math.max(1, wrappedDetails.length) * 14;
+          const positionHeight = Math.max(1, wrappedPositions.length) * 14;
+          const cardHeight = 114 + detailHeight + positionHeight;
+          ensureSpace(cardHeight + 20);
+
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+          doc.roundedRect(
+            marginX,
+            cursorY,
+            contentWidth,
+            cardHeight,
+            12,
+            12,
+            "FD"
+          );
+
+          const accentHex =
+            sanitizeHexColor(marker.color) || sanitizeHexColor(typeInfo?.color);
+          const accentRgb = hexToRgb(accentHex);
+          if (accentRgb) {
+            doc.setFillColor(accentRgb.r, accentRgb.g, accentRgb.b);
+            doc.circle(marginX + contentWidth - 28, cursorY + 22, 8, "F");
+            doc.setDrawColor(255, 255, 255);
+            doc.setLineWidth(1);
+            doc.circle(marginX + contentWidth - 28, cursorY + 22, 8, "S");
+            doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+            doc.setLineWidth(0.6);
+          }
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(13);
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+          doc.text(`${idx + 1}. ${title}`, marginX + 18, cursorY + 24);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
+          const metaParts = [];
+          if (typeInfo.label) metaParts.push(typeInfo.label);
+          if (marker.id) metaParts.push(`ID ${marker.id}`);
+          const metaText = metaParts.join(" | ");
+          if (metaText) doc.text(metaText, marginX + 18, cursorY + 40);
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(11);
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+          doc.text("Details", marginX + 18, cursorY + 58);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
+          let lineY = cursorY + 74;
+          if (wrappedDetails.length) {
+            wrappedDetails.forEach((line) => {
+              doc.text(line, marginX + 18, lineY);
+              lineY += 14;
+            });
+          } else {
+            doc.text(
+              "Keine Detailinformationen hinterlegt.",
+              marginX + 18,
+              lineY
+            );
+            lineY += 14;
+          }
+
+          lineY += 10;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(11);
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+          doc.text("Position", marginX + 18, lineY);
+          lineY += 16;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(11);
+          doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
+          wrappedPositions.forEach((line) => {
+            doc.text(line, marginX + 18, lineY);
+            lineY += 14;
+          });
+
+          cursorY += cardHeight + 20;
+        });
+
+        let mapSnapshot = null;
+        if (payload.length) {
+          const captureMapSnapshotForPdf = async () => {
+            if (!map) return null;
+            const html2canvas = window.html2canvas;
+            if (typeof html2canvas !== "function") {
+              console.warn(
+                "html2canvas nicht verfügbar – Karten-Screenshot wird übersprungen."
+              );
+              return null;
+            }
+            if (typeof L === "undefined") return null;
+            const latLngs = payload
+              .filter(
+                (marker) =>
+                  Number.isFinite(marker.lat) && Number.isFinite(marker.lng)
+              )
+              .map((marker) => L.latLng(marker.lat, marker.lng));
+            if (!latLngs.length) return null;
+
+            const waitForMapIdle = () =>
+              new Promise((resolve) => {
+                if (!map) {
+                  resolve();
+                  return;
+                }
+                let settled = false;
+                const finalize = () => {
+                  if (settled) return;
+                  settled = true;
+                  cleanup();
+                  setTimeout(resolve, 60);
+                };
+                const cleanup = () => {
+                  map.off("moveend", finalize);
+                  map.off("zoomend", finalize);
+                  map.off("load", finalize);
+                  map.off("resize", finalize);
+                };
+                map.once("moveend", finalize);
+                map.once("zoomend", finalize);
+                map.once("load", finalize);
+                map.once("resize", finalize);
+                setTimeout(finalize, 450);
+              });
+
+            const layer =
+              typeof ensureCustomMarkerLayer === "function"
+                ? ensureCustomMarkerLayer()
+                : customMarkerLayer;
+            const markersWereVisible =
+              map && layer ? map.hasLayer(layer) : customMarkerLayerVisible;
+            if (
+              !markersWereVisible &&
+              typeof setCustomMarkerVisibility === "function"
+            ) {
+              try {
+                setCustomMarkerVisibility(true);
+              } catch {}
+            }
+            const gridLayerRef =
+              typeof gridLayer !== "undefined" && gridLayer
+                ? gridLayer
+                : null;
+            const gridWasVisible =
+              map && gridLayerRef ? map.hasLayer(gridLayerRef) : false;
+            if (gridWasVisible) {
+              try {
+                map.removeLayer(gridLayerRef);
+              } catch {}
+            }
+
+            const previousView =
+              map &&
+              typeof map.getCenter === "function" &&
+              typeof map.getZoom === "function"
+                ? { center: map.getCenter(), zoom: map.getZoom() }
+                : null;
+
+            const maxZoomValue =
+              typeof map.getMaxZoom === "function" ? map.getMaxZoom() : null;
+            const minZoomValue =
+              typeof map.getMinZoom === "function" ? map.getMinZoom() : null;
+
+            if (latLngs.length === 1) {
+              let targetZoom = 16;
+              if (Number.isFinite(maxZoomValue))
+                targetZoom = Math.min(targetZoom, maxZoomValue);
+              if (Number.isFinite(minZoomValue))
+                targetZoom = Math.max(targetZoom, minZoomValue);
+              map.setView(latLngs[0], targetZoom, { animate: false });
+            } else {
+              const bounds = L.latLngBounds(latLngs);
+              if (bounds.isValid()) {
+                const fitOptions = { padding: [40, 40], animate: false };
+                if (Number.isFinite(maxZoomValue))
+                  fitOptions.maxZoom = maxZoomValue;
+                map.fitBounds(bounds, fitOptions);
+              }
+            }
+
+            await waitForMapIdle();
+
+            if (typeof map.invalidateSize === "function") {
+              map.invalidateSize();
+            }
+
+            await waitForMapIdle();
+
+            const container =
+              map && typeof map.getContainer === "function"
+                ? map.getContainer()
+                : null;
+            if (!container) {
+              if (
+                !markersWereVisible &&
+                typeof setCustomMarkerVisibility === "function"
+              ) {
+                try {
+                  setCustomMarkerVisibility(false);
+                } catch {}
+              }
+              if (
+                previousView &&
+                previousView.center &&
+                Number.isFinite(previousView.zoom)
+              ) {
+                map.setView(previousView.center, previousView.zoom, {
+                  animate: false,
+                });
+              }
+              return null;
+            }
+
+            let snapshot = null;
+            try {
+              const dpr = Math.max(
+                1,
+                Math.min(window.devicePixelRatio || 1, 2)
+              );
+              const canvas = await html2canvas(container, {
+                useCORS: true,
+                backgroundColor: "#ffffff",
+                logging: false,
+                scale: dpr,
+              });
+              snapshot = {
+                dataUrl: canvas.toDataURL("image/png"),
+                width: canvas.width,
+                height: canvas.height,
+              };
+            } catch (err) {
+              console.warn(
+                "Karten-Screenshot konnte nicht erstellt werden",
+                err
+              );
+            }
+
+            if (
+              previousView &&
+              previousView.center &&
+              Number.isFinite(previousView.zoom)
+            ) {
+              map.setView(previousView.center, previousView.zoom, {
+                animate: false,
+              });
+              await waitForMapIdle();
+            }
+
+            if (
+              !markersWereVisible &&
+              typeof setCustomMarkerVisibility === "function"
+            ) {
+              try {
+                setCustomMarkerVisibility(false);
+              } catch {}
+            }
+
+            if (gridWasVisible && gridLayerRef) {
+              try {
+                gridLayerRef.addTo(map);
+              } catch {}
+              try {
+                redrawGridNow();
+              } catch {}
+            }
+
+            return snapshot;
+          };
+
+          mapSnapshot = await captureMapSnapshotForPdf();
+        }
+
+        if (
+          mapSnapshot &&
+          mapSnapshot.dataUrl &&
+          mapSnapshot.width &&
+          mapSnapshot.height
+        ) {
+          const imageWidth = contentWidth - 36;
+          const imageHeight = Math.round(
+            (imageWidth / mapSnapshot.width) * mapSnapshot.height
+          );
+          const mapCardHeight = imageHeight + 72;
+          ensureSpace(mapCardHeight + 20);
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
+          doc.roundedRect(
+            marginX,
+            cursorY,
+            contentWidth,
+            mapCardHeight,
+            12,
+            12,
+            "FD"
+          );
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(12);
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+          doc.text("Kartenübersicht", marginX + 18, cursorY + 24);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
+          doc.text("Alle Marker im Überblick", marginX + 18, cursorY + 40);
+          doc.addImage(
+            mapSnapshot.dataUrl,
+            "PNG",
+            marginX + 18,
+            cursorY + 54,
+            imageWidth,
+            imageHeight
+          );
+          cursorY += mapCardHeight + 20;
+        }
+
+        const finalStamp = now
+          .toISOString()
+          .replace(/[:.]/g, "-")
+          .replace(/Z$/, "Z");
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i += 1) {
+          doc.setPage(i);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
+          const footerY = pageHeight - 32;
+          doc.text(
+            `Stand: ${stamp}  •  Marker: ${totalMarkers}`,
+            marginX,
+            footerY
+          );
+          doc.text(`Seite ${i} / ${pageCount}`, pageWidth - marginX, footerY, {
+            align: "right",
+          });
+        }
+
+        doc.save(`kw-marker-liste-${finalStamp}.pdf`);
+        updateCustomMarkerHint("");
+      }
+
       function exportCustomMarkersToFile() {
         try {
           const markers = collectCustomMarkerPayload();
@@ -7075,6 +8750,7 @@
               lead: missionData.lead,
               section: missionData.section,
               enterSection: missionData.enterSection,
+              description: missionData.description,
             },
             markers,
           };
@@ -7108,19 +8784,43 @@
 
       function applyImportedMission(mission = {}) {
         if (!mission || typeof mission !== "object") return;
-        const fields = {
-          name: "missionName",
-          lead: "missionLead",
-          section: "missionSection",
-          enterSection: "missionEnterSection",
-        };
-        Object.keys(fields).forEach((key) => {
+        Object.keys(MISSION_FIELD_DOM).forEach((key) => {
           if (typeof mission[key] === "string") {
             setMissionValue(key, mission[key]);
-            const input = $(fields[key]);
-            if (input) input.value = mission[key];
           }
         });
+      }
+
+      function focusMapOnCustomMarkerLatLngs(latLngs) {
+        if (!map || !Array.isArray(latLngs) || !latLngs.length) return;
+        const bounds = L.latLngBounds(latLngs);
+        if (!bounds.isValid()) return;
+
+        const maxZoomValue =
+          typeof map.getMaxZoom === "function" ? map.getMaxZoom() : null;
+        const minZoomValue =
+          typeof map.getMinZoom === "function" ? map.getMinZoom() : null;
+
+        if (latLngs.length === 1) {
+          let targetZoom = 16;
+          if (Number.isFinite(maxZoomValue))
+            targetZoom = Math.min(maxZoomValue, 17);
+          if (Number.isFinite(minZoomValue))
+            targetZoom = Math.max(targetZoom, minZoomValue);
+          map.flyTo(bounds.getCenter(), targetZoom, { animate: true });
+          return;
+        }
+
+        const fitOptions = { padding: [40, 40], animate: true };
+        if (Number.isFinite(maxZoomValue)) fitOptions.maxZoom = maxZoomValue;
+        map.fitBounds(bounds, fitOptions);
+      }
+
+      function centerCustomMarkersOnMap() {
+        const latLngs = collectCustomMarkerLatLngs();
+        if (!latLngs.length) return;
+        setCustomMarkerVisibility(true);
+        focusMapOnCustomMarkerLatLngs(latLngs);
       }
 
       function importCustomMarkersFromData(data) {
@@ -7160,6 +8860,7 @@
           );
 
         clearCustomMarkers();
+        setCustomMarkerVisibility(true);
         toCreate.forEach((rec) => {
           instantiateCustomMarker(rec, { persist: false });
         });
@@ -7168,6 +8869,7 @@
           `Import abgeschlossen (${toCreate.length} Marker übernommen).`
         );
         applyImportedMission(data.mission || {});
+        centerCustomMarkersOnMap();
       }
 
       function handleCustomMarkerImportFile(file) {
@@ -7193,10 +8895,67 @@
         reader.readAsText(file);
       }
 
+      function normalizeMissionValue(key, value) {
+        let next = typeof value === "string" ? value.trim() : "";
+        const limit = MISSION_FIELD_LIMITS[key];
+        if (Number.isInteger(limit) && limit > 0) {
+          next = next.slice(0, limit);
+        }
+        return next;
+      }
+
+      function updateMissionFieldUI(key) {
+        const cfg = MISSION_FIELD_DOM[key];
+        if (!cfg) return;
+        const inputEl = cfg.input ? $(cfg.input) : null;
+        const targetValue = missionData[key] || "";
+        if (
+          inputEl &&
+          inputEl.value !== targetValue &&
+          document.activeElement !== inputEl
+        ) {
+          inputEl.value = targetValue;
+        }
+        const hintEl = cfg.hint ? $(cfg.hint) : null;
+        if (hintEl) {
+          const limit = MISSION_FIELD_LIMITS[key];
+          if (Number.isInteger(limit) && limit > 0) {
+            const currentValue = inputEl ? inputEl.value : targetValue;
+            const length = (currentValue || "").length;
+            hintEl.hidden = !(length >= limit);
+          } else {
+            hintEl.hidden = true;
+          }
+        }
+        if (key === "description") updateMissionDescriptionToggle();
+      }
+
+      function updateMissionDescriptionToggle() {
+        const cfg = MISSION_FIELD_DOM.description;
+        if (!cfg) return;
+        const btn = cfg.toggle ? $(cfg.toggle) : null;
+        const hasText = !!(
+          missionData.description && missionData.description.length
+        );
+        if (!btn) return;
+        const visible = missionDescriptionVisible && hasText;
+        btn.dataset.visible = visible ? "1" : "0";
+        btn.classList.toggle("toggle-on", visible);
+        btn.disabled = !hasText;
+        btn.setAttribute(
+          "aria-label",
+          visible
+            ? "Einsatzbeschreibung ausblenden"
+            : "Einsatzbeschreibung einblenden"
+        );
+      }
+
       function setMissionValue(key, value) {
         if (!Object.prototype.hasOwnProperty.call(missionData, key)) return;
-        missionData[key] = typeof value === "string" ? value.trim() : "";
+        missionData[key] = normalizeMissionValue(key, value);
         updateMissionDisplay();
+        updateMissionFieldUI(key);
+        writeStoredMissionData();
       }
 
       function updateMissionDisplay() {
@@ -7223,15 +8982,25 @@
           }
         }
 
-        [
-          ["missionClear", missionData.name],
-          ["missionLeadClear", missionData.lead],
-          ["missionSectionClear", missionData.section],
-          ["missionEnterSectionClear", missionData.enterSection],
-        ].forEach(([btnId, val]) => {
-          const btn = $(btnId);
-          if (btn) btn.disabled = !val;
+        const descEl = $("missionDescriptionOverlay");
+        if (descEl) {
+          if (missionData.description && missionDescriptionVisible) {
+            descEl.textContent = missionData.description;
+            descEl.toggleAttribute("hidden", false);
+          } else {
+            descEl.textContent = "";
+            descEl.toggleAttribute("hidden", true);
+          }
+        }
+
+        Object.entries(MISSION_FIELD_DOM).forEach(([key, cfg]) => {
+          const clearBtn = cfg.clear ? $(cfg.clear) : null;
+          if (clearBtn) {
+            const value = missionData[key] || "";
+            clearBtn.disabled = !value.length;
+          }
         });
+        updateMissionDescriptionToggle();
       }
 
       function setupTabBox(container) {
@@ -8767,6 +10536,7 @@
         }
         restoreCustomMarkers();
         setCustomMarkerMode(false);
+        restoreMissionData();
 
         const ok = await mgrsReady.catch(() => false);
         if (!ok) {
@@ -8845,6 +10615,51 @@
           importInput.addEventListener("change", () => {
             const file = importInput.files && importInput.files[0];
             if (file) handleCustomMarkerImportFile(file);
+          });
+        }
+        const centerBtn = $("customMarkerCenter");
+        if (centerBtn) {
+          centerBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            centerCustomMarkersOnMap();
+          });
+        }
+        const listBtn = $("customMarkerList");
+        if (listBtn) {
+          listBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            showCustomMarkerOverlay();
+          });
+        }
+
+        const markerOverlay = $("customMarkerOverlay");
+        if (markerOverlay) {
+          markerOverlay.addEventListener("click", (e) => {
+            if (e.target === markerOverlay) {
+              e.preventDefault();
+              hideCustomMarkerOverlay();
+            }
+          });
+        }
+        const markerOverlayClose = $("customMarkerOverlayClose");
+        if (markerOverlayClose) {
+          markerOverlayClose.addEventListener("click", (e) => {
+            e.preventDefault();
+            hideCustomMarkerOverlay();
+          });
+        }
+        const markerOverlayPdf = $("customMarkerOverlayPdf");
+        if (markerOverlayPdf) {
+          markerOverlayPdf.addEventListener("click", async (e) => {
+            e.preventDefault();
+            try {
+              await downloadCustomMarkerListPdf();
+            } catch (err) {
+              console.error("PDF-Export fehlgeschlagen", err);
+              updateCustomMarkerHint(
+                "PDF-Export fehlgeschlagen – Details siehe Konsole."
+              );
+            }
           });
         }
 
@@ -9015,27 +10830,33 @@
         updateMeasureControls();
         const markerHint = $("customMarkerHint");
         if (markerHint) markerHint.hidden = true;
-
-        const missionFields = [
-          { input: "missionText", clear: "missionClear", key: "name" },
-          { input: "missionLead", clear: "missionLeadClear", key: "lead" },
-          {
-            input: "missionSection",
-            clear: "missionSectionClear",
-            key: "section",
-          },
-          {
-            input: "missionEnterSection",
-            clear: "missionEnterSectionClear",
-            key: "enterSection",
-          },
-        ];
+        const missionFields = Object.entries(MISSION_FIELD_DOM).map(
+          ([key, cfg]) => ({
+            key,
+            input: cfg.input,
+            clear: cfg.clear,
+          })
+        );
 
         missionFields.forEach(({ input, clear, key }) => {
-          const inputEl = $(input);
-          const clearBtn = $(clear);
+          const fieldCfg = MISSION_FIELD_DOM[key] || {};
+          const inputEl = input
+            ? $(input)
+            : fieldCfg.input
+            ? $(fieldCfg.input)
+            : null;
+          const clearBtn = clear
+            ? $(clear)
+            : fieldCfg.clear
+            ? $(fieldCfg.clear)
+            : null;
           const getValue = () => (inputEl ? inputEl.value : "");
           const sync = () => setMissionValue(key, getValue());
+
+          const limit = MISSION_FIELD_LIMITS[key];
+          if (inputEl && Number.isInteger(limit) && limit > 0) {
+            inputEl.maxLength = limit;
+          }
 
           if (inputEl) {
             inputEl.addEventListener("input", sync);
@@ -9050,8 +10871,21 @@
               inputEl.focus();
             });
           }
+          if (key === "description") {
+            const toggleBtn = fieldCfg.toggle ? $(fieldCfg.toggle) : null;
+            if (toggleBtn) {
+              toggleBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                if (!missionData.description) return;
+                missionDescriptionVisible = !missionDescriptionVisible;
+                updateMissionDisplay();
+                writeStoredMissionData();
+              });
+            }
+          }
 
           sync();
+          if (key === "description") updateMissionDescriptionToggle();
         });
 
         setupTabBox("sec-coord-tabs");
@@ -9059,6 +10893,11 @@
         // ESC beendet Messung
         document.addEventListener("keydown", (e) => {
           if (e.key === "Escape") {
+            if (customMarkerOverlayOpen) {
+              e.preventDefault();
+              hideCustomMarkerOverlay();
+              return;
+            }
             if (customMarkerMode) {
               setCustomMarkerMode(false);
               return;
