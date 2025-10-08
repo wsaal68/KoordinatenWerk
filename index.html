@@ -6,8 +6,8 @@
     <title>KoordinatenWerk</title>
 
     <script>
-      const APP_VERSION = "v3.6.0";
-      const APP_DATE = "2025-10-06";
+      const APP_VERSION = "v3.7.1";
+      const APP_DATE = "2025-10-08";
     </script>
 
     <!-- Favicons -->
@@ -8241,43 +8241,53 @@
           ),
         };
 
-        missionNameForHeader =
-          missionSnapshot.name || missionData.name || "";
+        missionNameForHeader = missionSnapshot.name || missionData.name || "";
 
         const missionPdfRecords = [
           {
+            key: "name",
             label: "Bezeichnung des Einsatzes",
             value: missionSnapshot.name || missionData.name || "",
           },
           {
+            key: "lead",
             label: "Einsatzleitung",
             value: missionSnapshot.lead || missionData.lead || "",
           },
           {
+            key: "section",
             label: "Einsatzabschnittsleitung",
             value: missionSnapshot.section || missionData.section || "",
           },
           {
+            key: "enterSection",
             label: "Untereinsatzabschnittsleitung",
             value:
               missionSnapshot.enterSection || missionData.enterSection || "",
           },
           {
+            key: "description",
             label: "Einsatzbeschreibung",
             value: missionSnapshot.description || missionData.description || "",
           },
         ];
 
-        const missionWrapped = missionPdfRecords.flatMap((rec) =>
-          doc.splitTextToSize(
-            `${rec.label}: ${rec.value ? rec.value : "—"}`
-              .replace(/\s+/g, " ")
-              .trim(),
-            contentWidth - 32
-          )
-        );
+        const missionLayout = missionPdfRecords.map((rec) => {
+          const baseValue = rec.value ? rec.value : "—";
+          const normalized = baseValue.replace(/\s+/g, " ").trim();
+          const valueText = normalized.length ? normalized : "—";
+          const lines = doc.splitTextToSize(valueText, contentWidth - 32);
+          return {
+            label: rec.label,
+            lines: lines.length ? lines : ["—"],
+          };
+        });
 
-        const missionBoxHeight = 42 + missionWrapped.length * 16;
+        const missionLineCount = missionLayout.reduce((total, item) => {
+          return total + 1 + (item.lines.length || 1);
+        }, 0);
+
+        const missionBoxHeight = 42 + missionLineCount * 16;
         ensureSpace(missionBoxHeight + 10);
         doc.setFillColor(panelFill.r, panelFill.g, panelFill.b);
         doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
@@ -8298,16 +8308,16 @@
         doc.setFontSize(11);
         doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
         let missionY = cursorY + 44;
-        missionPdfRecords.forEach((rec) => {
-          const value = rec.value ? rec.value : "—";
-          const lines = doc.splitTextToSize(
-            `${rec.label}: ${value}`.replace(/\s+/g, " ").trim(),
-            contentWidth - 32
-          );
-          lines.forEach((line) => {
+        missionLayout.forEach((item) => {
+          doc.setTextColor(textColor.r, textColor.g, textColor.b);
+          doc.text(`${item.label}:`, marginX + 18, missionY);
+          missionY += 16;
+          doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
+          item.lines.forEach((line) => {
             doc.text(line, marginX + 18, missionY);
             missionY += 16;
           });
+          doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
         });
         cursorY += missionBoxHeight + 24;
 
@@ -8540,9 +8550,7 @@
               } catch {}
             }
             const gridLayerRef =
-              typeof gridLayer !== "undefined" && gridLayer
-                ? gridLayer
-                : null;
+              typeof gridLayer !== "undefined" && gridLayer ? gridLayer : null;
             const gridWasVisible =
               map && gridLayerRef ? map.hasLayer(gridLayerRef) : false;
             if (gridWasVisible) {
