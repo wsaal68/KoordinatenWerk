@@ -3579,7 +3579,7 @@
                 />
               </svg>
             </span>
-            <span>Eigene Markierungen</span>
+            <span>Eigene Marker</span>
           </h2>
           <!-- <div
             id="customTexteHint"
@@ -10071,7 +10071,7 @@
         if (titleEl) {
           titleEl.textContent = labelText
             ? `Marker – ${labelText}`
-            : "Markierung bearbeiten";
+            : "Marker bearbeiten";
         }
 
         markerPopupOverlayPreviousFocus =
@@ -11475,7 +11475,7 @@
           doc.setFontSize(10);
           doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
           doc.text(
-            "Lageplan aller Markierungen im Überblick",
+            "Lageplan aller Marker im Überblick",
             marginX + 18,
             cursorY + 40
           );
@@ -12310,7 +12310,7 @@
         nameInput.type = "text";
         nameInput.id = nameInputId;
         nameInput.maxLength = 30;
-        nameInput.placeholder = "Titel der Markierung …";
+        nameInput.placeholder = "Titel des Markers …";
         nameInput.value = (entry.data.label || "").slice(0, 30);
         container.appendChild(nameInput);
         const nameHint = document.createElement("div");
@@ -14312,7 +14312,7 @@
             const confirmed = await showKwConfirm({
               title: "Alle Marker löschen?",
               message:
-                "Alle eigenen Markierungen werden dauerhaft entfernt. Dieser Schritt kann nicht rückgängig gemacht werden.",
+                "Alle eigenen Marker werden dauerhaft entfernt. Dieser Schritt kann nicht rückgängig gemacht werden.",
               confirmLabel: "Alles löschen",
               cancelLabel: "Abbrechen",
               danger: true,
