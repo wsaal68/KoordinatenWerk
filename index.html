@@ -11230,6 +11230,14 @@
         let mapSnapshot = null;
         if (payload.length) {
           const captureMapSnapshotForPdf = async () => {
+            try {
+              customMarkerCenter();
+            } catch (err) {
+              console.warn(
+                "customMarkerCenter vor Karten-Screenshot fehlgeschlagen",
+                err
+              );
+            }
             if (!map) return null;
             if (typeof html2canvas !== "function") {
               console.warn(
@@ -11594,7 +11602,7 @@
         map.fitBounds(bounds, fitOptions);
       }
 
-      function centerCustomMarkersOnMap() {
+      function customMarkerCenter() {
         const latLngs = collectCustomMarkerLatLngs();
         if (!latLngs.length) return;
         setCustomMarkerVisibility(true);
@@ -11651,7 +11659,7 @@
           `Import abgeschlossen (${toCreate.length} Marker übernommen).`
         );
         applyImportedMission(data.mission || {});
-        centerCustomMarkersOnMap();
+        customMarkerCenter();
       }
 
       function handleCustomMarkerImportFile(file) {
@@ -14001,7 +14009,7 @@
         if (centerBtn) {
           centerBtn.addEventListener("click", (e) => {
             e.preventDefault();
-            centerCustomMarkersOnMap();
+            customMarkerCenter();
           });
         }
         const listBtn = $("customMarkerList");
