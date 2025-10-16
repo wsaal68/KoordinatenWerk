@@ -6,7 +6,7 @@
     <title>KoordinatenWerk</title>
 
     <script>
-      const APP_VERSION = "v3.9.1";
+      const APP_VERSION = "v3.9.2";
       const APP_DATE = "2025-10-16";
     </script>
 
@@ -5602,8 +5602,8 @@
             innerSvg: schadenInnerSvg || gefahrInnerSvg,
             pointerColor: isGefahr ? "#000000" : undefined,
           });
-        const svgIconAnchor = isSvgTriangle ? [32, 48] : [32, 64];
-        const svgPopupAnchor = isSvgTriangle ? [0, -48] : [0, -64];
+          const svgIconAnchor = isSvgTriangle ? [32, 48] : [32, 64];
+          const svgPopupAnchor = isSvgTriangle ? [0, -48] : [0, -64];
           return L.divIcon({
             className: `custom-marker-icon svg-marker-icon type-${typeClass}`,
             iconSize: [64, 88],
@@ -11337,11 +11337,8 @@
               if (bounds.isValid()) {
                 const paddedBounds = bounds.pad(0.05);
                 const fitOptions = { padding: [48, 48], animate: false };
-                const maxSnapshotZoom = Number.isFinite(maxZoomValue)
-                  ? Math.min(maxZoomValue, 17)
-                  : 17;
-                if (Number.isFinite(maxSnapshotZoom))
-                  fitOptions.maxZoom = maxSnapshotZoom;
+                if (Number.isFinite(maxZoomValue))
+                  fitOptions.maxZoom = maxZoomValue;
                 map.fitBounds(paddedBounds, fitOptions);
               }
             }
