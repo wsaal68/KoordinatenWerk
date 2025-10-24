@@ -36,6 +36,16 @@ Download index.html und die PNG-Dateien und speichere sie in einem Verzeichnis.
 - [mgrs.js](https://github.com/proj4js/mgrs) für MGRS-Koordinaten
 - [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) für Geocoding
 
+## Entwicklung & Tests
+
+```bash
+npm install         # Abhängigkeiten installieren
+npm run lint        # JavaScript- und Inline-Skripte prüfen
+npm run lint:html   # HTML-Struktur prüfen
+```
+
+Für GitHub-Repositories steht unter `.github/workflows/lint.yml` ein Workflow bereit, der beide Lints automatisch bei jedem Push/PR gegen `main` ausführt.
+
 ## Lizenz
 
 MIT License – siehe [LICENSE](LICENSE).
