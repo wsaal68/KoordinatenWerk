@@ -6,8 +6,8 @@
     <title>KoordinatenWerk</title>
 
     <script>
-      const APP_VERSION = "v3.9.3";
-      const APP_DATE = "2025-10-24";
+      const APP_VERSION = "v3.9.4";
+      const APP_DATE = "2025-11-17";
     </script>
 
     <!-- Favicons -->
@@ -1510,6 +1510,61 @@
         height: 32px;
         font: 13px/1.3 Arial, sans-serif;
       }
+      .custom-marker-popup input[type="text"]:focus-visible,
+      .custom-marker-popup select:focus-visible,
+      .custom-marker-popup textarea:focus-visible {
+        outline: none;
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px rgba(143, 180, 255, 0.12);
+      }
+
+      /* Coord-edit: container should not draw a frame; inputs show consistent frames */
+      .custom-marker-popup .cm-coord-edit {
+        padding: 0;
+        background: transparent;
+      }
+
+      /* Give each editable input/select/textarea a consistent frame and background */
+      .custom-marker-popup .cm-coord-edit input[type="text"],
+      .custom-marker-popup .cm-coord-edit select,
+      .custom-marker-popup .cm-coord-edit textarea,
+      .custom-marker-popup .cm-coord-edit .cm-utm-part,
+      .custom-marker-popup .cm-coord-edit .cm-mgrs-part,
+      .custom-marker-popup .cm-coord-edit .cm-addr-input-edit {
+        background: #1b2430;
+        color: #f1f5ff;
+        border: 1px solid #3a4354;
+        border-radius: 6px;
+        padding: 4px 8px;
+        box-sizing: border-box;
+        font: 13px/1.3 Arial, sans-serif;
+      }
+
+      /* Keep small inputs compact but visibly framed */
+      .custom-marker-popup .cm-coord-edit .cm-utm-part,
+      .custom-marker-popup .cm-coord-edit .cm-mgrs-part {
+        height: auto;
+        padding: 0.06rem 0.12rem;
+      }
+
+      /* Address edit: make the input wider and left-aligned */
+      .custom-marker-popup .cm-coord-edit .cm-addr-input-edit {
+        width: 100%;
+        min-width: 0;
+        height: 36px;
+        padding: 6px 10px;
+        text-align: left;
+      }
+
+      /* Ensure individual focused inputs show the same glow as other inputs */
+      .custom-marker-popup .cm-coord-edit input[type="text"]:focus-visible,
+      .custom-marker-popup .cm-coord-edit select:focus-visible,
+      .custom-marker-popup .cm-coord-edit textarea:focus-visible,
+      .custom-marker-popup .cm-coord-edit .cm-addr-input-edit:focus-visible {
+        outline: none;
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px rgba(143, 180, 255, 0.12);
+      }
       .custom-marker-popup textarea {
         width: 100%;
         background: #1b2430;
@@ -1535,8 +1590,17 @@
         display: none;
       }
       .custom-marker-popup select:focus-visible {
-        outline: 2px solid var(--brand);
-        outline-offset: 2px;
+        /* Use the same border+box-shadow as other inputs; avoid adding a separate outline */
+        outline: none;
+        outline-offset: 0;
+      }
+
+      /* Ensure coord-edit selects don't get the global outer outline (avoids double frame) */
+      .custom-marker-popup .cm-coord-edit select:focus-visible {
+        outline: none !important;
+        outline-offset: 0 !important;
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px rgba(143, 180, 255, 0.12);
       }
       .custom-marker-popup select:disabled {
         cursor: not-allowed;
@@ -1563,11 +1627,78 @@
       .custom-marker-popup .cm-coord-edit {
         display: flex;
         flex-direction: column;
+        position: relative;
         gap: 6px;
         margin-top: 6px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        padding: 0;
       }
       .custom-marker-popup .cm-coord-edit input[type="text"] {
         background: #1b2430;
+      }
+      /* Make address edit input left-aligned and full-width */
+      .custom-marker-popup .cm-addr-input-edit {
+        text-align: left;
+        width: 100%;
+        display: block;
+      }
+      /* Make address input larger to use full popup width */
+      .custom-marker-popup .cm-addr-input-edit {
+        min-height: var(--ctl-h);
+        height: var(--ctl-h);
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+
+      /* Ensure UTM/MGRS part inputs show focus similarly */
+      .custom-marker-popup .cm-utm-part:focus-visible,
+      .custom-marker-popup .cm-mgrs-part:focus-visible,
+      .custom-marker-popup .cm-addr-input-edit:focus-visible {
+        outline: none;
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px rgba(143, 180, 255, 0.12);
+      }
+
+      /* Style address search results to match dark popup */
+      .custom-marker-popup .cm-addr-results-edit {
+        position: absolute;
+        left: 0;
+        right: 0;
+        z-index: 40;
+        max-height: 40vh;
+        overflow-y: auto;
+        overflow-x: auto;
+        box-sizing: border-box;
+        padding: 6px;
+        border-radius: 6px;
+        background: #111827 !important;
+        color: #e6efff !important;
+        border: 1px solid #3a4354 !important;
+      }
+
+      .custom-marker-popup .cm-addr-results-edit option {
+        background: #111827 !important;
+        color: #e6efff !important;
+        white-space: normal;
+        word-break: break-word;
+      }
+
+      /* When using the custom div-based results, style each item */
+      .custom-marker-popup .cm-addr-results-edit .cm-addr-result {
+        white-space: normal;
+        word-break: break-word;
+        padding: 8px;
+        font-size: 0.95rem;
+      }
+      .custom-marker-popup .cm-addr-results-edit .cm-addr-result:hover {
+        background: rgba(143, 180, 255, 0.06);
+      }
+
+      /* Ensure copied notice / coord notice is visible above the popup edges */
+      .custom-marker-popup .copy-notice {
+        z-index: 10;
       }
       .custom-marker-popup .cm-color-row {
         display: grid;
@@ -1772,9 +1903,11 @@
         min-height: var(--ctl-h);
         resize: none;
       }
+      /* Use the unified focus style defined for inputs (border + box-shadow). */
       .custom-marker-popup textarea:focus-visible {
-        outline: 2px solid var(--brand);
-        outline-offset: 2px;
+        outline: none;
+        border-color: var(--brand);
+        box-shadow: 0 0 0 3px rgba(143, 180, 255, 0.12);
       }
       .custom-marker-popup label,
       .custom-marker-popup .hint {
@@ -2799,6 +2932,20 @@
       #sec-dms button {
         min-height: 32px;
         padding: 6px;
+      }
+
+      /* Einheitliche Rahmen / Styling für Eingabefelder in den Koordinaten-Sektionen */
+      #sec-utm input,
+      #sec-utm select,
+      #sec-mgrs input,
+      #sec-mgrs select,
+      #sec-dec input,
+      #sec-dms input {
+        background: #1b2430;
+        color: #f1f5ff;
+        border: 1px solid #3a4354;
+        border-radius: 6px;
+        padding: 6px 8px;
       }
 
       /* String-/Lesefelder (UTM/MGRS) und Copy-Buttons kleiner */
@@ -4229,6 +4376,8 @@
         let customMarkerLayer = null;
         let customMarkerLayerVisible = true;
         let customMarkerMode = false;
+        // id of a custom marker which is awaiting relocation via map click
+        let pendingCustomMarkerRelocate = null;
         let storageAvailable = true;
         let customMarkerOverlayOpen = false;
         let customMarkerOverlayPreviousFocus = null;
@@ -9436,6 +9585,30 @@
           }
           const errEl = root.querySelector('[data-role="cm-coord-error"]');
           if (errEl && !errEl.textContent.trim()) errEl.style.display = "none";
+          // Set placeholders of part inputs to the current coordinate parts
+          try {
+            const utmParts =
+              utmStr && utmStr !== "—" ? utmStr.split(/\s+/) : [];
+            const utmZoneEl = root.querySelector(".cm-utm-zone");
+            const utmBandEl = root.querySelector(".cm-utm-band");
+            const utmEastEl = root.querySelector(".cm-utm-east");
+            const utmNorthEl = root.querySelector(".cm-utm-north");
+            if (utmZoneEl) utmZoneEl.placeholder = utmParts[0] || "";
+            if (utmBandEl) utmBandEl.placeholder = utmParts[1] || "";
+            if (utmEastEl) utmEastEl.placeholder = utmParts[2] || "";
+            if (utmNorthEl) utmNorthEl.placeholder = utmParts[3] || "";
+
+            const mgrsParts =
+              mgrsStr && mgrsStr !== "—" ? mgrsStr.split(/\s+/) : [];
+            const mgrsZoneEl = root.querySelector(".cm-mgrs-zoneband");
+            const mgrsSqEl = root.querySelector(".cm-mgrs-square");
+            const mgrsEastEl = root.querySelector(".cm-mgrs-east");
+            const mgrsNorthEl = root.querySelector(".cm-mgrs-north");
+            if (mgrsZoneEl) mgrsZoneEl.placeholder = mgrsParts[0] || "";
+            if (mgrsSqEl) mgrsSqEl.placeholder = mgrsParts[1] || "";
+            if (mgrsEastEl) mgrsEastEl.placeholder = mgrsParts[2] || "";
+            if (mgrsNorthEl) mgrsNorthEl.placeholder = mgrsParts[3] || "";
+          } catch {}
         }
 
         function setCustomMarkerLatLng(entry, lat, lng, source = "manual") {
@@ -9457,6 +9630,15 @@
             if (oldCacheKey && oldCacheKey !== cacheKey)
               reverseGeocodeCache.delete(oldCacheKey);
             if (cacheKey) reverseGeocodeCache.delete(cacheKey);
+            // If this marker was pending relocation, clear the pending flag
+            try {
+              if (
+                typeof pendingCustomMarkerRelocate !== "undefined" &&
+                pendingCustomMarkerRelocate === entry.data.id
+              ) {
+                pendingCustomMarkerRelocate = null;
+              }
+            } catch {}
           }
           if (cacheKey) entry.addressCacheKey = cacheKey;
           if (source !== "drag") {
@@ -9712,7 +9894,9 @@
           const sections = [];
           if (headerParts.length)
             sections.push(
-              `<div class="mission-overlay-header">${headerParts.join("")}</div>`
+              `<div class="mission-overlay-header">${headerParts.join(
+                ""
+              )}</div>`
             );
           if (descriptionHtml) sections.push(descriptionHtml);
 
@@ -10345,6 +10529,51 @@
           );
           markerPopupOverlayState.commit = (options = {}) =>
             commit({ close: options.close !== false, force: !!options.force });
+          // ensure part input styling exists once
+          try {
+            if (!document.getElementById("cm-part-styles")) {
+              const s = document.createElement("style");
+              s.id = "cm-part-styles";
+              s.textContent = `
+                /* Layout for small coordinate part inputs: inline, no-wrap */
+                .cm-utm-parts, .cm-mgrs-parts {
+                  display: flex;
+                  flex-wrap: nowrap;
+                  align-items: center;
+                  gap: 12px;
+                  margin-bottom: 4px;
+                  overflow: auto;
+                }
+                /* Compact inputs: reduce padding, height and remove shadow */
+                .cm-utm-parts input, .cm-mgrs-parts input {
+                  margin: 0;
+                  box-sizing: content-box;
+                  padding: 0.06rem 0.12rem;
+                  height: 1.4rem;
+                  line-height: 1.2rem;
+                  border-radius: 2px;
+                  box-shadow: none !important;
+                  -webkit-appearance: none;
+                  outline-offset: 0;
+                }
+                /* Part wrapper: label above input */
+                .cm-part-field { display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+                .cm-part-field input { width: 100%; box-sizing: border-box; }
+                .cm-part-label { font-size: 0.72rem; margin: 0; padding: 0; color: #222; }
+                /* Wrapper-based flex layout so specific parts keep fixed basis and east/north grow */
+                .cm-utm-parts > .cm-part-field:nth-child(1) { flex: 0 0 2ch; }
+                .cm-utm-parts > .cm-part-field:nth-child(2) { flex: 0 0 1ch; }
+                .cm-utm-parts > .cm-part-field:nth-child(3), .cm-utm-parts > .cm-part-field:nth-child(4) { flex: 1 1 7ch; min-width: 5ch; }
+                .cm-mgrs-parts > .cm-part-field:nth-child(1) { flex: 0 0 3ch; }
+                .cm-mgrs-parts > .cm-part-field:nth-child(2) { flex: 0 0 2ch; }
+                .cm-mgrs-parts > .cm-part-field:nth-child(3), .cm-mgrs-parts > .cm-part-field:nth-child(4) { flex: 1 1 5ch; min-width: 4ch; }
+                /* Remove any drop shadow under the whole parts container */
+                .cm-utm-parts, .cm-mgrs-parts { box-shadow: none !important; filter: none !important; }
+              `;
+              document.head && document.head.appendChild(s);
+            }
+          } catch {}
+
           updateCustomMarkerPopupCoords(entry, { root: container });
           ensureCustomMarkerAddress(entry, { root: container });
           dispatchMarkerPopupResize();
@@ -11127,20 +11356,26 @@
 
           const strengthParts = splitStrengthDisplay(aggregateStrengthDisplay);
           const hasStrength = strengthParts.length > 0;
-          const strengthTotal = hasStrength ? strengthParts[strengthParts.length - 1] : "";
-          const strengthPrefix = hasStrength && strengthParts.length > 1
-            ? strengthParts
-                .slice(0, -1)
-                .map((part) => part.trim())
-                .filter(Boolean)
-            : [];
+          const strengthTotal = hasStrength
+            ? strengthParts[strengthParts.length - 1]
+            : "";
+          const strengthPrefix =
+            hasStrength && strengthParts.length > 1
+              ? strengthParts
+                  .slice(0, -1)
+                  .map((part) => part.trim())
+                  .filter(Boolean)
+              : [];
 
           const paddingX = 18;
           const paddingTop = 24;
           const paddingBottom = 22;
           const lineHeight = 14;
           const descriptionLines = missionDescriptionText
-            ? doc.splitTextToSize(missionDescriptionText.trim(), contentWidth - paddingX * 2)
+            ? doc.splitTextToSize(
+                missionDescriptionText.trim(),
+                contentWidth - paddingX * 2
+              )
             : [];
           const descriptionHeight = descriptionLines.length
             ? descriptionLines.length * lineHeight + 12
@@ -11161,13 +11396,17 @@
             },
             {
               label: "Untereinsatzabschnittsleitung",
-              value: missionSnapshot.enterSection || missionData.enterSection || "",
+              value:
+                missionSnapshot.enterSection || missionData.enterSection || "",
             },
           ];
 
           const blockHeights = infoBlocks.map((block) => {
             const valueText = String(block.value || "").trim() || "—";
-            const lines = doc.splitTextToSize(valueText, contentWidth - paddingX * 2);
+            const lines = doc.splitTextToSize(
+              valueText,
+              contentWidth - paddingX * 2
+            );
             const lineCount = Math.max(1, lines.length);
             return lineHeight /*label*/ + lineCount * lineHeight + 6;
           });
@@ -11207,9 +11446,14 @@
             const headerStrengthText = strengthPrefix.length
               ? `${strengthPrefix.join(" / ")} // ${strengthTotal}`
               : strengthTotal;
-            doc.text(`Gesamtstärke: ${headerStrengthText}`, marginX + contentWidth - paddingX, missionY, {
-              align: "right",
-            });
+            doc.text(
+              `Gesamtstärke: ${headerStrengthText}`,
+              marginX + contentWidth - paddingX,
+              missionY,
+              {
+                align: "right",
+              }
+            );
           }
           missionY += 24;
 
@@ -11225,7 +11469,10 @@
             doc.setFont("helvetica", "normal");
             doc.setTextColor(subtleText.r, subtleText.g, subtleText.b);
             const valueText = String(block.value || "").trim() || "—";
-            const lines = doc.splitTextToSize(valueText, contentWidth - paddingX * 2);
+            const lines = doc.splitTextToSize(
+              valueText,
+              contentWidth - paddingX * 2
+            );
             lines.forEach((line) => {
               doc.text(line, boxPaddingX, cursorInfoY);
               cursorInfoY += lineHeight;
@@ -12719,12 +12966,42 @@
           coordCheckbox.dataset.role = "cm-coord-checkbox";
           const coordLabel = document.createElement("label");
           coordLabel.setAttribute("for", coordCheckboxId);
-          coordLabel.textContent = "Marker auf Koordinate setzen";
+          coordLabel.textContent = "Marker neu platzieren";
           const coordWrap = document.createElement("div");
           coordWrap.appendChild(coordCheckbox);
           coordWrap.appendChild(coordLabel);
           coordToggle.appendChild(coordWrap);
           coordSection.appendChild(coordToggle);
+          // Initialize checkbox state if this marker is already pending relocation
+          try {
+            // If this marker already has a saved address, it was likely relocated
+            // programmatically (e.g. via address) — do not show the relocate checkbox as checked.
+            const hasSavedAddress = !!(
+              entry.data && (entry.data.address || "").trim()
+            );
+            coordCheckbox.checked =
+              !hasSavedAddress && pendingCustomMarkerRelocate === entry.data.id;
+          } catch {}
+          // When checkbox is toggled, enable a one-shot relocate mode for this marker
+          coordCheckbox.addEventListener("change", () => {
+            if (coordCheckbox.checked) {
+              // clear other pending relocate flags
+              document
+                .querySelectorAll('[data-role="cm-coord-checkbox"]')
+                .forEach((el) => {
+                  if (el !== coordCheckbox) el.checked = false;
+                });
+              pendingCustomMarkerRelocate = entry.data.id;
+              const n = $(coordNoticeId);
+              if (n)
+                n.textContent =
+                  "Klicke in die Karte, um Marker neu zu platzieren.";
+            } else {
+              pendingCustomMarkerRelocate = null;
+              const n = $(coordNoticeId);
+              if (n) n.textContent = "";
+            }
+          });
 
           const coordsDisplay = document.createElement("div");
           coordsDisplay.className = "cm-coord-display hint";
@@ -12807,6 +13084,8 @@
           addrValueEl.dataset.role = "cm-address-display";
           addrValueEl.textContent = "—";
           addrValueWrap.appendChild(addrValueEl);
+
+          // read-only address display kept here
           const addrCopyBtn = document.createElement("button");
           addrCopyBtn.type = "button";
           addrCopyBtn.className = "cm-copy-btn";
@@ -12827,6 +13106,8 @@
           addrRow.appendChild(addrValueWrap);
           coordsDisplay.appendChild(addrRow);
 
+          // popup address search moved into edit area (shown when editing)
+
           coordSection.appendChild(coordsDisplay);
 
           const coordNotice = document.createElement("div");
@@ -12840,41 +13121,367 @@
           coordsEditWrap.className = "cm-coord-edit";
           coordsEditWrap.style.display = "none";
 
+          // UTM: replace single input with small part inputs (zone, band, east, north)
           const utmLabel = document.createElement("label");
           const utmInputId = `cm-utm-${entry.data.id}`;
           utmLabel.setAttribute("for", utmInputId);
           utmLabel.textContent = "UTM";
           coordsEditWrap.appendChild(utmLabel);
 
+          // adapter (kept for compatibility) — hidden in normal UI
           const utmInput = document.createElement("input");
-          utmInput.type = "text";
+          utmInput.type = "hidden";
           utmInput.id = utmInputId;
-          utmInput.placeholder = "z. B. 32U 448933 5412345";
           utmInput.dataset.role = "cm-utm-input";
-          utmInput.autocomplete = "off";
-          utmInput.spellcheck = false;
-          utmInput.inputMode = "text";
-          utmInput.maxLength = 26;
-          utmInput.title =
-            "UTM-Format: Zone Band Ostwert Nordwert (z. B. 32 U 448933 5412345)";
           coordsEditWrap.appendChild(utmInput);
 
+          const utmPartsWrap = document.createElement("div");
+          utmPartsWrap.className = "cm-utm-parts";
+
+          const utmZoneId = `cm-utm-zone-${entry.data.id}`;
+          const utmBandId = `cm-utm-band-${entry.data.id}`;
+          const utmEastId = `cm-utm-east-${entry.data.id}`;
+          const utmNorthId = `cm-utm-north-${entry.data.id}`;
+
+          const utmZone = document.createElement("input");
+          utmZone.type = "text";
+          utmZone.id = utmZoneId;
+          utmZone.placeholder = "z. B. 32";
+          utmZone.inputMode = "numeric";
+          utmZone.maxLength = 2;
+          utmZone.className = "cm-utm-part cm-utm-zone";
+          utmZone.style.width = "100%";
+          utmZone.style.minWidth = "2ch";
+          utmZone.style.height = "1.0rem";
+          utmZone.style.padding = "0.06rem 0.12rem";
+          utmZone.style.boxShadow = "none";
+
+          const utmBand = document.createElement("input");
+          utmBand.type = "text";
+          utmBand.id = utmBandId;
+          utmBand.placeholder = "z. B. U";
+          utmBand.inputMode = "text";
+          utmBand.maxLength = 1;
+          utmBand.className = "cm-utm-part cm-utm-band";
+          utmBand.style.width = "100%";
+          utmBand.style.minWidth = "1ch";
+          utmBand.style.height = "1.0rem";
+          utmBand.style.padding = "0.06rem 0.12rem";
+          utmBand.style.boxShadow = "none";
+
+          const utmEast = document.createElement("input");
+          utmEast.type = "text";
+          utmEast.id = utmEastId;
+          utmEast.placeholder = "z. B. 448933";
+          utmEast.inputMode = "numeric";
+          utmEast.maxLength = 7;
+          utmEast.className = "cm-utm-part cm-utm-east";
+          utmEast.style.width = "100%";
+          utmEast.style.minWidth = "7ch";
+          utmEast.style.height = "1.0rem";
+          utmEast.style.padding = "0.06rem 0.12rem";
+          utmEast.style.boxShadow = "none";
+
+          const utmNorth = document.createElement("input");
+          utmNorth.type = "text";
+          utmNorth.id = utmNorthId;
+          utmNorth.placeholder = "z. B. 5412345";
+          utmNorth.inputMode = "numeric";
+          utmNorth.maxLength = 7;
+          utmNorth.className = "cm-utm-part cm-utm-north";
+          utmNorth.style.width = "100%";
+          utmNorth.style.minWidth = "7ch";
+          utmNorth.style.height = "1.0rem";
+          utmNorth.style.padding = "0.06rem 0.12rem";
+          utmNorth.style.boxShadow = "none";
+
+          // wrap each part with a small label above the input
+          const wrapPart = (labelText, inputEl) => {
+            const w = document.createElement("div");
+            w.className = "cm-part-field";
+            const l = document.createElement("label");
+            l.setAttribute("for", inputEl.id);
+            l.className = "cm-part-label";
+            l.textContent = labelText;
+            w.appendChild(l);
+            w.appendChild(inputEl);
+            return w;
+          };
+
+          utmPartsWrap.appendChild(wrapPart("Zone", utmZone));
+          utmPartsWrap.appendChild(wrapPart("Band", utmBand));
+          utmPartsWrap.appendChild(wrapPart("Ostwert", utmEast));
+          utmPartsWrap.appendChild(wrapPart("Nordwert", utmNorth));
+          coordsEditWrap.appendChild(utmPartsWrap);
+
+          // MGRS: split into zoneband, square, east, north. Keep hidden adapter.
           const mgrsLabel = document.createElement("label");
           const mgrsInputId = `cm-mgrs-${entry.data.id}`;
           mgrsLabel.setAttribute("for", mgrsInputId);
           mgrsLabel.textContent = "MGRS";
           coordsEditWrap.appendChild(mgrsLabel);
 
+          // adapter (kept for compatibility) — hidden in normal UI
           const mgrsInput = document.createElement("input");
-          mgrsInput.type = "text";
+          mgrsInput.type = "hidden";
           mgrsInput.id = mgrsInputId;
-          mgrsInput.placeholder = "z. B. 32U NV 12345 67890";
           mgrsInput.dataset.role = "cm-mgrs-input";
-          mgrsInput.autocomplete = "off";
-          mgrsInput.spellcheck = false;
-          mgrsInput.inputMode = "text";
-          mgrsInput.maxLength = 24;
           coordsEditWrap.appendChild(mgrsInput);
+
+          const mgrsPartsWrap = document.createElement("div");
+          mgrsPartsWrap.className = "cm-mgrs-parts";
+
+          const mgrsZbId = `cm-mgrs-zoneband-${entry.data.id}`;
+          const mgrsSqId = `cm-mgrs-square-${entry.data.id}`;
+          const mgrsEastId = `cm-mgrs-east-${entry.data.id}`;
+          const mgrsNorthId = `cm-mgrs-north-${entry.data.id}`;
+
+          const mgrsZoneBand = document.createElement("input");
+          mgrsZoneBand.type = "text";
+          mgrsZoneBand.id = mgrsZbId;
+          mgrsZoneBand.placeholder = "ZoneBand (z.B. 32U)";
+          mgrsZoneBand.inputMode = "text";
+          mgrsZoneBand.maxLength = 3;
+          mgrsZoneBand.className = "cm-mgrs-part cm-mgrs-zoneband";
+          mgrsZoneBand.style.width = "100%";
+          mgrsZoneBand.style.minWidth = "3ch";
+          mgrsZoneBand.style.height = "1.0rem";
+          mgrsZoneBand.style.padding = "0.06rem 0.12rem";
+          mgrsZoneBand.style.boxShadow = "none";
+
+          const mgrsSquare = document.createElement("input");
+          mgrsSquare.type = "text";
+          mgrsSquare.id = mgrsSqId;
+          mgrsSquare.placeholder = "Quadrat (z.B. NV)";
+          mgrsSquare.inputMode = "text";
+          mgrsSquare.maxLength = 2;
+          mgrsSquare.className = "cm-mgrs-part cm-mgrs-square";
+          mgrsSquare.style.width = "100%";
+          mgrsSquare.style.minWidth = "2ch";
+          mgrsSquare.style.height = "1.0rem";
+          mgrsSquare.style.padding = "0.06rem 0.12rem";
+          mgrsSquare.style.boxShadow = "none";
+
+          const mgrsEast = document.createElement("input");
+          mgrsEast.type = "text";
+          mgrsEast.id = mgrsEastId;
+          mgrsEast.placeholder = "Ostwert";
+          mgrsEast.inputMode = "numeric";
+          mgrsEast.maxLength = 5;
+          mgrsEast.className = "cm-mgrs-part cm-mgrs-east";
+          mgrsEast.style.width = "100%";
+          mgrsEast.style.minWidth = "5ch";
+          mgrsEast.style.height = "1.0rem";
+          mgrsEast.style.padding = "0.06rem 0.12rem";
+          mgrsEast.style.boxShadow = "none";
+
+          const mgrsNorth = document.createElement("input");
+          mgrsNorth.type = "text";
+          mgrsNorth.id = mgrsNorthId;
+          mgrsNorth.placeholder = "Nordwert";
+          mgrsNorth.inputMode = "numeric";
+          mgrsNorth.maxLength = 5;
+          mgrsNorth.className = "cm-mgrs-part cm-mgrs-north";
+          mgrsNorth.style.width = "100%";
+          mgrsNorth.style.minWidth = "5ch";
+          mgrsNorth.style.height = "1.0rem";
+          mgrsNorth.style.padding = "0.06rem 0.12rem";
+          mgrsNorth.style.boxShadow = "none";
+
+          // reuse wrapPart helper defined above
+
+          mgrsPartsWrap.appendChild(wrapPart("ZoneBand", mgrsZoneBand));
+          mgrsPartsWrap.appendChild(wrapPart("Quadrat", mgrsSquare));
+          mgrsPartsWrap.appendChild(wrapPart("Ostwert", mgrsEast));
+          mgrsPartsWrap.appendChild(wrapPart("Nordwert", mgrsNorth));
+          coordsEditWrap.appendChild(mgrsPartsWrap);
+
+          // Address edit area (visible only in edit mode) - alternative to coordinate input
+          // Append label like UTM so it occupies the left grid column
+          const addrEditWrap = document.createElement("div");
+          addrEditWrap.className = "cm-coord-value-wrap";
+          // stack top row and results vertically
+          addrEditWrap.style.display = "flex";
+          addrEditWrap.style.flexDirection = "column";
+          addrEditWrap.style.gap = "6px";
+          // top label above input
+          const addrTopLabel = document.createElement("label");
+          addrTopLabel.className = "cm-part-label";
+          addrTopLabel.textContent = "Adresse";
+          addrTopLabel.style.marginBottom = "4px";
+          addrTopLabel.style.fontWeight = "600";
+          addrTopLabel.style.fontSize = "0.95rem";
+          const addrEditInput = document.createElement("input");
+          addrEditInput.type = "text";
+          addrEditInput.className = "cm-addr-input-edit";
+          addrEditInput.placeholder = "";
+          addrEditInput.autocomplete = "off";
+          addrEditInput.style.marginLeft = "0";
+          const addrInputId = `cm-addr-input-${entry.data.id}`;
+          addrEditInput.id = addrInputId;
+          addrEditInput.style.boxSizing = "border-box";
+          // put input and button on the same row, results below
+          const addrEditBtn = document.createElement("button");
+          addrEditBtn.type = "button";
+          addrEditBtn.textContent = "Suchen";
+          addrEditBtn.className = "cm-addr-btn-edit";
+          addrEditBtn.style.marginLeft = "8px";
+          addrEditBtn.style.padding = "0.12rem 0.4rem";
+          addrEditBtn.style.fontSize = "0.85rem";
+
+          const addrEditTop = document.createElement("div");
+          addrEditTop.className = "cm-addr-top";
+          addrEditTop.style.display = "flex";
+          addrEditTop.style.alignItems = "center";
+          addrEditTop.style.width = "100%";
+          addrEditTop.style.gap = "8px";
+          addrEditTop.style.flex = "1 1 auto";
+          addrEditInput.style.flex = "1 1 auto";
+          addrEditInput.style.minWidth = "0";
+          addrEditInput.style.width = "100%";
+          addrEditTop.appendChild(addrEditInput);
+          addrEditTop.appendChild(addrEditBtn);
+          // Place the address input as a full-width field (label above input)
+          addrEditWrap.appendChild(addrTopLabel);
+          addrEditWrap.appendChild(addrEditTop);
+          // addrEditWrap will be appended into coordsEditWrap below
+
+          // Use a div container for results so we can render multi-line items
+          // (select cannot contain arbitrary block elements reliably).
+          const addrEditResults = document.createElement("div");
+          addrEditResults.style.display = "none";
+          addrEditResults.className = "cm-addr-results-edit";
+          addrEditResults.style.marginTop = "6px";
+          addrEditResults.style.width = "100%";
+          addrEditResults.style.boxSizing = "border-box";
+          addrEditResults.style.flexBasis = "100%";
+          addrEditResults.style.marginLeft = "0";
+          addrEditResults.setAttribute("role", "listbox");
+          addrEditWrap.appendChild(addrEditResults);
+
+          const addrEditHint = document.createElement("div");
+          addrEditHint.className = "cm-addr-hint-edit";
+          addrEditHint.style.display = "none";
+          addrEditHint.style.marginTop = "4px";
+          addrEditWrap.appendChild(addrEditHint);
+          coordsEditWrap.appendChild(addrEditWrap);
+
+          // popup search function for the edit input
+          let popupLastSearchResults = null;
+          let popupLastSelectedIndex = null;
+          const popupDoSearch = async (q) => {
+            if (!q || !q.trim()) return;
+            addrEditHint.style.display = "none";
+            addrEditResults.style.display = "none";
+            addrEditResults.innerHTML = "";
+            updateCustomMarkerPopupAddress(entry, {
+              root: container,
+              loading: true,
+            });
+            try {
+              const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+                  q
+                )}&addressdetails=1&limit=10&countrycodes=de`,
+                { headers: { "Accept-Language": "de" } }
+              );
+              if (!res.ok) {
+                throw new Error("HTTP " + res.status);
+              }
+              const data = await res.json();
+              if (!Array.isArray(data) || data.length === 0) {
+                addrEditHint.textContent =
+                  "Kein bzw. zuviele Treffer gefunden. Bitte Suchbegriff anpassen.";
+                addrEditHint.style.display = "block";
+                updateCustomMarkerPopupAddress(entry, {
+                  root: container,
+                  failed: true,
+                });
+                return;
+              }
+              // store results and show them; do NOT apply automatically
+              popupLastSearchResults = Array.isArray(data) ? data : null;
+              popupLastSelectedIndex = null;
+              addrEditResults.style.display = "block";
+              addrEditResults.style.width = "100%";
+              // render list items as block elements allowing multi-line
+              addrEditResults.innerHTML = data
+                .map(
+                  (d, i) =>
+                    `<div class="cm-addr-result" role="option" data-idx="${i}">${escapeHtml(
+                      d.display_name
+                    )}</div>`
+                )
+                .join("");
+              // attach click / hover handlers to each result
+              try {
+                const items =
+                  addrEditResults.querySelectorAll(".cm-addr-result");
+                items.forEach((it) => {
+                  it.style.padding = "8px";
+                  it.style.cursor = "pointer";
+                  it.style.borderBottom = "1px solid rgba(58,67,84,0.6)";
+                  it.addEventListener("click", (ev) => {
+                    const idx = Number(it.dataset.idx);
+                    if (Number.isNaN(idx) || !popupLastSearchResults) return;
+                    popupLastSelectedIndex = idx;
+                    const d = popupLastSearchResults[idx];
+                    const preview =
+                      formatReverseGeocodeAddress(d).trim() ||
+                      (typeof d.display_name === "string"
+                        ? d.display_name.trim()
+                        : "");
+                    addrEditHint.textContent = preview;
+                    addrEditHint.style.display = preview ? "block" : "none";
+                    addrEditResults.style.display = "none";
+                  });
+                  it.addEventListener("mouseover", () => {
+                    const idx = Number(it.dataset.idx);
+                    if (Number.isNaN(idx) || !popupLastSearchResults) return;
+                    const d = popupLastSearchResults[idx];
+                    const preview =
+                      formatReverseGeocodeAddress(d).trim() ||
+                      (typeof d.display_name === "string"
+                        ? d.display_name.trim()
+                        : "");
+                    addrEditHint.textContent = preview;
+                    addrEditHint.style.display = preview ? "block" : "none";
+                  });
+                });
+              } catch {}
+            } catch (e) {
+              console.warn("Popup geocoding failed", e);
+              addrEditHint.textContent =
+                "Suche momentan nicht erreichbar. Bitte später erneut versuchen.";
+              addrEditHint.style.display = "block";
+              updateCustomMarkerPopupAddress(entry, {
+                root: container,
+                failed: true,
+              });
+            }
+          };
+
+          function escapeHtml(s) {
+            return String(s)
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+          }
+
+          addrEditInput.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter") {
+              ev.preventDefault();
+              popupDoSearch(addrEditInput.value.trim());
+            }
+          });
+          // do not auto-search on blur (avoids unwanted network calls)
+          addrEditInput.addEventListener("blur", (ev) => {
+            addrEditHint.style.display = "none";
+          });
+          addrEditBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            popupDoSearch(addrEditInput.value.trim());
+          });
 
           const coordError = document.createElement("div");
           coordError.className = "warn";
@@ -12925,6 +13532,20 @@
             coordCheckbox.checked = enabled;
             coordsDisplay.style.display = enabled ? "none" : "block";
             coordsEditWrap.style.display = enabled ? "flex" : "none";
+            try {
+              const addrEditInput = coordsEditWrap.querySelector(
+                ".cm-addr-input-edit"
+              );
+              const addrEditResults = coordsEditWrap.querySelector(
+                ".cm-addr-results-edit"
+              );
+              const addrEditHint =
+                coordsEditWrap.querySelector(".cm-addr-hint-edit");
+              if (addrEditInput)
+                addrEditInput.style.display = enabled ? "inline-block" : "none";
+              if (addrEditResults) addrEditResults.style.display = "none";
+              if (addrEditHint) addrEditHint.style.display = "none";
+            } catch {}
             if (enabled) {
               if (coordNotice) {
                 if (coordNotice._copyTimer) {
@@ -12939,8 +13560,20 @@
               updateCustomMarkerPopupCoords(entry, { root: container });
               setTimeout(() => {
                 try {
-                  utmInput.focus();
-                  utmInput.select();
+                  // focus first visible part (zone)
+                  const zoneEl = document.getElementById(
+                    `cm-utm-zone-${entry.data.id}`
+                  );
+                  const zbEl = document.getElementById(
+                    `cm-mgrs-zoneband-${entry.data.id}`
+                  );
+                  if (zoneEl) {
+                    zoneEl.focus();
+                    zoneEl.select();
+                  } else if (zbEl) {
+                    zbEl.focus();
+                    zbEl.select();
+                  }
                 } catch {}
               }, 0);
             } else {
@@ -12962,16 +13595,34 @@
             }
             const parsed = parseCustomMarkerUTMString(sanitized);
             if (!parsed) {
-              if (force)
+              // Only show error if this was a user-triggered validation (force)
+              // and there is actually something typed in the UTM input parts.
+              if (
+                force &&
+                (utmInput.value ||
+                  utmZone.value ||
+                  utmBand.value ||
+                  utmEast.value ||
+                  utmNorth.value)
+              ) {
                 setCoordError("UTM-Eingabe unvollständig oder ungültig.");
+              }
               return;
             }
             const latLng = utmParsedToLatLng(parsed);
             if (!latLng) {
-              if (force)
+              if (
+                force &&
+                (utmInput.value ||
+                  utmZone.value ||
+                  utmBand.value ||
+                  utmEast.value ||
+                  utmNorth.value)
+              ) {
                 setCoordError(
                   "UTM-Koordinate konnte nicht umgerechnet werden."
                 );
+              }
               return;
             }
             isSyncingCoords = true;
@@ -12999,8 +13650,17 @@
             }
             const latLng = parseCustomMarkerMGRSString(sanitized);
             if (!latLng) {
-              if (force)
+              // Only show MGRS error when user actually typed something.
+              if (
+                force &&
+                (mgrsInput.value ||
+                  mgrsZoneBand.value ||
+                  mgrsSquare.value ||
+                  mgrsEast.value ||
+                  mgrsNorth.value)
+              ) {
                 setCoordError("MGRS-Eingabe unvollständig oder ungültig.");
+              }
               return;
             }
             isSyncingCoords = true;
@@ -13020,59 +13680,235 @@
             }
           };
 
-          let suppressUtmSanitize = false;
-          const applyUtmSanitize = () => {
-            if (suppressUtmSanitize) return;
-            const sanitized = sanitizeCustomMarkerUTMInput(utmInput.value);
-            if (sanitized !== utmInput.value) {
-              suppressUtmSanitize = true;
-              utmInput.value = sanitized;
-              try {
-                utmInput.setSelectionRange(sanitized.length, sanitized.length);
-              } catch {}
-              suppressUtmSanitize = false;
-            }
+          // Build combined values from part inputs and validate on blur/change/Enter.
+          const makeUtmString = () => {
+            const z = utmZone && utmZone.value ? utmZone.value.trim() : "";
+            const b = utmBand && utmBand.value ? utmBand.value.trim() : "";
+            const e = utmEast && utmEast.value ? utmEast.value.trim() : "";
+            const n = utmNorth && utmNorth.value ? utmNorth.value.trim() : "";
+            const parts = [];
+            if (z || b) parts.push(`${z}${b}`.trim());
+            if (e) parts.push(e);
+            if (n) parts.push(n);
+            return parts.join(" ");
           };
 
-          utmInput.addEventListener("input", () => {
-            applyUtmSanitize();
-            handleUtmUpdate(false);
-          });
-          utmInput.addEventListener("change", () => handleUtmUpdate(true));
-          utmInput.addEventListener("blur", () => handleUtmUpdate(true));
-          utmInput.addEventListener("keydown", (ev) => {
-            if (ev.key === "Enter") {
-              ev.preventDefault();
-              handleUtmUpdate(true);
-            }
-          });
-
-          let suppressMgrsSanitize = false;
-          const applyMgrsSanitize = () => {
-            if (suppressMgrsSanitize) return;
-            const sanitized = sanitizeCustomMarkerMGRSInput(mgrsInput.value);
-            if (sanitized !== mgrsInput.value) {
-              suppressMgrsSanitize = true;
-              mgrsInput.value = sanitized;
-              try {
-                mgrsInput.setSelectionRange(sanitized.length, sanitized.length);
-              } catch {}
-              suppressMgrsSanitize = false;
-            }
+          const makeMgrsString = () => {
+            const zb =
+              mgrsZoneBand && mgrsZoneBand.value
+                ? mgrsZoneBand.value.trim()
+                : "";
+            const sq =
+              mgrsSquare && mgrsSquare.value ? mgrsSquare.value.trim() : "";
+            const e = mgrsEast && mgrsEast.value ? mgrsEast.value.trim() : "";
+            const n =
+              mgrsNorth && mgrsNorth.value ? mgrsNorth.value.trim() : "";
+            const parts = [];
+            if (zb) parts.push(zb);
+            if (sq) parts.push(sq);
+            if (e) parts.push(e);
+            if (n) parts.push(n);
+            return parts.join(" ");
           };
 
-          mgrsInput.addEventListener("input", () => {
-            applyMgrsSanitize();
-            handleMgrsUpdate(false);
-          });
-          mgrsInput.addEventListener("change", () => handleMgrsUpdate(true));
-          mgrsInput.addEventListener("blur", () => handleMgrsUpdate(true));
-          mgrsInput.addEventListener("keydown", (ev) => {
-            if (ev.key === "Enter") {
+          const onUtmPartBlur = () => {
+            if (!coordCheckbox.checked || isSyncingCoords) return;
+            clearCoordError();
+            const combined = makeUtmString();
+            utmInput.value = sanitizeCustomMarkerUTMInput(combined);
+            // try to compute lat/lng from UTM and fill MGRS parts automatically
+            try {
+              const parsed = parseCustomMarkerUTMString(utmInput.value);
+              const latLng = parsed ? utmParsedToLatLng(parsed) : null;
+              if (latLng) {
+                try {
+                  if (typeof mgrs === "object") {
+                    const m = (mgrs.forward([latLng.lng, latLng.lat], 5) || "")
+                      .toUpperCase()
+                      .replace(/\s+/g, "");
+                    const zoneBand = m.slice(0, 3) || "";
+                    const sq = m.slice(3, 5) || "";
+                    const e = m.slice(5, 10) || "";
+                    const n = m.slice(10, 15) || "";
+                    mgrsZoneBand.value = zoneBand;
+                    mgrsSquare.value = sq;
+                    mgrsEast.value = e;
+                    mgrsNorth.value = n;
+                    mgrsInput.value = sanitizeCustomMarkerMGRSInput(
+                      [zoneBand, sq, e, n].filter(Boolean).join(" ")
+                    );
+                  }
+                } catch {}
+              }
+            } catch {}
+            handleUtmUpdate(true);
+          };
+
+          const onMgrsPartBlur = () => {
+            if (!coordCheckbox.checked || isSyncingCoords) return;
+            clearCoordError();
+            const combined = makeMgrsString();
+            mgrsInput.value = sanitizeCustomMarkerMGRSInput(combined);
+            // try to compute lat/lng from MGRS and fill UTM parts automatically
+            try {
+              const latLng = parseCustomMarkerMGRSString(mgrsInput.value);
+              if (latLng) {
+                try {
+                  const utmStr = getUTMString(latLng.lat, latLng.lng) || "";
+                  const toks = utmStr.split(/\s+/).filter(Boolean);
+                  if (toks.length >= 3) {
+                    const first = toks[0] || "";
+                    const band = toks[1] || "";
+                    const e = toks[2] || "";
+                    const n = toks[3] || "";
+                    utmZone.value = first;
+                    utmBand.value = band;
+                    utmEast.value = e;
+                    utmNorth.value = n || "";
+                    utmInput.value = sanitizeCustomMarkerUTMInput(
+                      [first, band, e, n].filter(Boolean).join(" ")
+                    );
+                  }
+                } catch {}
+              }
+            } catch {}
+            handleMgrsUpdate(true);
+          };
+
+          // light input sanitizers for parts to keep typing usable
+          const partDigitsOnly = (el, maxLen) => {
+            el.addEventListener("input", () => {
+              const s = (el.value || "")
+                .replace(/\D+/g, "")
+                .slice(0, maxLen || 999);
+              if (el.value !== s) el.value = s;
+            });
+          };
+          const partLettersOnly = (el, maxLen) => {
+            el.addEventListener("input", () => {
+              const s = (el.value || "")
+                .replace(/[^A-Za-z]+/g, "")
+                .toUpperCase()
+                .slice(0, maxLen || 999);
+              if (el.value !== s) el.value = s;
+            });
+          };
+
+          // allow alphanumeric (digits+letters) — used for MGRS zone+band (e.g. 32U)
+          const partAlnumOnly = (el, maxLen) => {
+            el.addEventListener("input", () => {
+              const s = (el.value || "")
+                .replace(/[^0-9A-Za-z]+/g, "")
+                .toUpperCase()
+                .slice(0, maxLen || 999);
+              if (el.value !== s) el.value = s;
+            });
+          };
+
+          // hook up UTM part events
+          try {
+            partDigitsOnly(utmZone, 2);
+            partLettersOnly(utmBand, 1);
+            partDigitsOnly(utmEast, 7);
+            partDigitsOnly(utmNorth, 7);
+            [utmZone, utmBand, utmEast, utmNorth].forEach((el) => {
+              el.addEventListener("blur", onUtmPartBlur);
+              el.addEventListener("keydown", (ev) => {
+                if (ev.key === "Enter") {
+                  ev.preventDefault();
+                  onUtmPartBlur();
+                }
+              });
+            });
+          } catch {}
+
+          // hook up MGRS part events
+          try {
+            partAlnumOnly(mgrsZoneBand, 3);
+            partLettersOnly(mgrsSquare, 2);
+            partDigitsOnly(mgrsEast, 5);
+            partDigitsOnly(mgrsNorth, 5);
+            [mgrsZoneBand, mgrsSquare, mgrsEast, mgrsNorth].forEach((el) => {
+              el.addEventListener("blur", onMgrsPartBlur);
+              el.addEventListener("keydown", (ev) => {
+                if (ev.key === "Enter") {
+                  ev.preventDefault();
+                  onMgrsPartBlur();
+                }
+              });
+            });
+          } catch {}
+
+          // paste handling: if user pastes a full UTM/MGRS string into the parts container,
+          // try to split it into parts and populate fields.
+          try {
+            utmPartsWrap.addEventListener("paste", (ev) => {
+              const txt =
+                (ev.clipboardData || window.clipboardData).getData("text") ||
+                "";
+              if (!txt) return;
               ev.preventDefault();
-              handleMgrsUpdate(true);
-            }
-          });
+              const s = sanitizeCustomMarkerUTMInput(txt).trim();
+              if (!s) return;
+              const toks = s.split(/\s+/);
+              let zone = "";
+              let band = "";
+              let east = "";
+              let north = "";
+              if (toks.length >= 3) {
+                // first token may contain zone+band or zone alone
+                const first = toks[0];
+                const m = first.match(/^(\d{1,2})([A-Za-z])?$/);
+                if (m) {
+                  zone = m[1] || "";
+                  band = m[2] || "";
+                  east = toks[1] || "";
+                  north = toks[2] || "";
+                } else if (toks.length >= 4) {
+                  // maybe zone and band were separate tokens
+                  zone = toks[0];
+                  band = toks[1];
+                  east = toks[2];
+                  north = toks[3];
+                } else {
+                  // fallback: try to split by characters
+                  const rest = toks.slice(1).join(" ");
+                  const parts = rest.split(/\s+/);
+                  east = parts[0] || "";
+                  north = parts[1] || "";
+                }
+              }
+              if (zone) utmZone.value = zone;
+              if (band) utmBand.value = band.toUpperCase();
+              if (east) utmEast.value = east;
+              if (north) utmNorth.value = north;
+              onUtmPartBlur();
+            });
+
+            mgrsPartsWrap.addEventListener("paste", (ev) => {
+              const txt =
+                (ev.clipboardData || window.clipboardData).getData("text") ||
+                "";
+              if (!txt) return;
+              ev.preventDefault();
+              const s = sanitizeCustomMarkerMGRSInput(txt).trim();
+              if (!s) return;
+              const toks = s.split(/\s+/);
+              if (toks.length >= 4) {
+                mgrsZoneBand.value = toks[0] || "";
+                mgrsSquare.value = toks[1] || "";
+                mgrsEast.value = toks[2] || "";
+                mgrsNorth.value = toks[3] || "";
+              } else if (toks.length === 3) {
+                // maybe square+east combined
+                mgrsZoneBand.value = toks[0] || "";
+                mgrsSquare.value = toks[1].slice(0, 2) || "";
+                mgrsEast.value = toks[1].slice(2) || "";
+                mgrsNorth.value = toks[2] || "";
+              }
+              onMgrsPartBlur();
+            });
+          } catch {}
 
           updateCustomMarkerPopupCoords(entry, { root: container });
           updateCustomMarkerPopupAddress(entry, { root: container });
@@ -13369,9 +14205,43 @@
             }
           };
 
-          saveBtn.addEventListener("click", () =>
-            commit({ close: true, force: true })
-          );
+          saveBtn.addEventListener("click", () => {
+            // if address search produced results and user selected one, apply it now
+            try {
+              const addrResultsEl = coordsEditWrap.querySelector(
+                ".cm-addr-results-edit"
+              );
+              if (addrResultsEl && popupLastSearchResults) {
+                const idx =
+                  typeof popupLastSelectedIndex === "number" &&
+                  popupLastSelectedIndex !== null
+                    ? popupLastSelectedIndex
+                    : 0;
+                if (!Number.isNaN(idx)) {
+                  const d = popupLastSearchResults[idx];
+                  if (d) {
+                    const lat = Number.parseFloat(d.lat);
+                    const lon = Number.parseFloat(d.lon);
+                    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                      // update the marker for this custom entry
+                      setCustomMarkerLatLng(entry, lat, lon, "addr");
+                      // store formatted address on entry
+                      const formatted =
+                        formatReverseGeocodeAddress(d).trim() ||
+                        (typeof d.display_name === "string"
+                          ? d.display_name.trim()
+                          : "");
+                      if (formatted) entry.data.address = formatted;
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn("Applying searched address on save failed", e);
+            }
+            commit({ close: true, force: true });
+            customMarkerCenter();
+          });
           const closeBtn = document.createElement("button");
           closeBtn.type = "button";
           closeBtn.textContent = "Schließen";
@@ -13691,6 +14561,36 @@
             insertTarget = null;
             return;
           }
+          // If a specific custom marker is awaiting relocation, perform it here
+          if (pendingCustomMarkerRelocate) {
+            const relocateId = pendingCustomMarkerRelocate;
+            pendingCustomMarkerRelocate = null;
+            try {
+              const entry = customMarkers.get(relocateId);
+              if (entry) {
+                setCustomMarkerLatLng(
+                  entry,
+                  e.latlng.lat,
+                  e.latlng.lng,
+                  "manual"
+                );
+                // If popup edit is open for this marker, clear the checkbox and notice
+                const root = resolveMarkerPopupRoot(entry);
+                if (root) {
+                  const cb = root.querySelector(
+                    '[data-role="cm-coord-checkbox"]'
+                  );
+                  if (cb) cb.checked = false;
+                  const notice = root.querySelector(".copy-notice");
+                  if (notice) notice.textContent = "";
+                  dispatchMarkerPopupResize();
+                }
+              }
+            } catch (err) {
+              console.warn("Relocate marker failed", err);
+            }
+            return;
+          }
           if (customMarkerMode) {
             handleCustomMarkerClick(e.latlng);
             return;
@@ -13862,13 +14762,13 @@
             const res = await fetch(
               `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
                 q
-              )}&addressdetails=1&limit=5`,
+              )}&addressdetails=1&limit=50&countrycodes=de`,
               { headers: { "Accept-Language": "de" } }
             );
             const data = await res.json();
             if (!Array.isArray(data) || data.length === 0) {
               hint.textContent =
-                "Kein Treffer gefunden. Bitte Suchbegriff anpassen.";
+                "Kein bzw. zuviele Treffer gefunden. Bitte Suchbegriff anpassen.";
               hint.style.display = "block";
               return;
             }
