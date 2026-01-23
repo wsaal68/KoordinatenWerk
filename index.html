@@ -8,6 +8,8 @@
     <script>
       const APP_VERSION = "v3.9.4";
       const APP_DATE = "2025-11-17";
+      const GITHUB_VERSION = APP_VERSION;
+      const GITHUB_RELEASE_URL = `https://github.com/wsaal68/KoordinatenWerk/releases/tag/${GITHUB_VERSION}`;
     </script>
 
     <!-- Favicons -->
@@ -224,6 +226,17 @@
         letter-spacing: 0.2px;
         white-space: nowrap;
         user-select: none;
+        text-decoration: none;
+      }
+      .version-badge.github-badge {
+        color: #b7d4ff;
+        border-color: #3a4a66;
+        background: rgba(143, 180, 255, 0.08);
+      }
+      #tacTimeBox .badge-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
       }
       #tacTT {
         color: #ffffff;
@@ -3060,13 +3073,26 @@
             <span id="tacMMMJJ">---</span>
           </div>
           <div class="tac-bottom">
-            <span
-              id="versionBadge"
-              class="version-badge"
-              aria-label="Version"
-              title="Version"
-              >v1.0.0</span
-            >
+            <div class="badge-row">
+              <span
+                id="versionBadge"
+                class="version-badge"
+                aria-label="Version"
+                title="Version"
+                >v1.0.0</span
+              >
+              <a
+                id="githubVersionBadge"
+                class="version-badge github-badge"
+                href="https://github.com/wsaal68/KoordinatenWerk"
+                target="_blank"
+                rel="noopener"
+                aria-label="GitHub-Version"
+                title="GitHub-Version"
+                hidden
+                >GH</a
+              >
+            </div>
             <div id="tacLocalTime">
               <b id="ltHHMM">--:--</b><span class="sec" id="ltSS">:--</span>
             </div>
@@ -15104,6 +15130,22 @@
                   : `Version: ${APP_VERSION}`;
               vb.title = tip;
               vb.setAttribute("aria-label", tip);
+            }
+            const ghb = document.getElementById("githubVersionBadge");
+            if (ghb && typeof GITHUB_VERSION === "string") {
+              const ghVersion = GITHUB_VERSION.trim();
+              if (ghVersion) {
+                ghb.textContent = `GH ${ghVersion}`;
+                const ghUrl =
+                  typeof GITHUB_RELEASE_URL === "string" && GITHUB_RELEASE_URL
+                    ? GITHUB_RELEASE_URL
+                    : "https://github.com/wsaal68/KoordinatenWerk";
+                ghb.href = ghUrl;
+                const ghTip = `GitHub-Version: ${ghVersion}`;
+                ghb.title = ghTip;
+                ghb.setAttribute("aria-label", ghTip);
+                ghb.hidden = false;
+              }
             }
           } catch {}
           const START_LAT = 49.0954122;
